@@ -1,369 +1,79 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Flappy Bird Deluxe - Eggs Edition</title>
+  <title>Flappy Bird Deluxe</title>
   <style>
     body {
       margin: 0;
       background: #000;
+      overflow: hidden; /* lock page scroll */
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      font-family: Arial, sans-serif;
-      color: white;
     }
     canvas {
-      background: #70c5ce;
-      display: block;
       image-rendering: pixelated;
+      image-rendering: crisp-edges;
       border: 2px solid #fff;
+      background: #000;
     }
   </style>
 </head>
 <body>
   <canvas id="game" width="400" height="600"></canvas>
-
   <script>
-    // ---------- Canvas ----------
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
 
-    // ---------- Maps ----------
-    const maps = {
-      classic: {
-        name: "Classic Day",
-        bg: "#70c5ce",
-        ground: "#ded895",
-        pipeMain: "#4CAF50",
-        pipeLip: "#3E8E41",
-        deco: "clouds"
-      },
-      night: {
-        name: "Night Mode",
-        bg: "#0a0f33",
-        ground: "#222244",
-        pipeMain: "#5555aa",
-        pipeLip: "#333377",
-        deco: "stars"
-      },
-      volcano: {
-        name: "Volcano",
-        bg: "#2b0d0d",
-        ground: "#4a1a1a",
-        pipeMain: "#ff4500",
-        pipeLip: "#cc3700",
-        deco: "lava"
-      },
-      jungle: {
-        name: "Jungle",
-        bg: "#1b5e20",
-        ground: "#4e342e",
-        pipeMain: "#2e7d32",
-        pipeLip: "#1b5e20",
-        deco: "jungleLeaves"
-      },
-      neon: {
-        name: "Neon City",
-        bg: "#2a003d",
-        ground: "#1a1a2e",
-        pipeMain: "#00e5ff",
-        pipeLip: "#ff4081",
-        deco: "neonCity"
-      },
-      crystal: {
-        name: "Crystal Caverns",
-        bg: "#001b3d",
-        ground: "#0d47a1",
-        pipeMain: "#4fc3f7",
-        pipeLip: "#e1f5fe",
-        deco: "crystals"
-      },
-      snowstorm: {
-        name: "Snowstorm",
-        bg: "#bbdefb",
-        ground: "#90caf9",
-        pipeMain: "#e3f2fd",
-        pipeLip: "#ffffff",
-        deco: "snow"
-      }
-    };
-    let selectedMap = "classic";
-
-    // ---------- Rarity + colors ----------
-    const rarityColors = {
-      Common: "#bbbbbb",
-      Uncommon: "#55ff55",
-      Rare: "#5599ff",
-      Epic: "#aa55ff",
-      Legendary: "#ffcc00",
-      Mythic: "#ff66cc"
-    };
-
-    // ---------- Birds ----------
-    const allBirds = [
-      { id: "sparrow", name: "Sparrow", rarity: "Common", multiplier: 1.0,
-        sprite: { body:"#b58b4a", wing:"#8b5a2b", beak:"#ffcc33", eye:"#ffffff", pupil:"#000000", accent:"#d2b48c" } },
-      { id: "pigeon", name: "Pigeon", rarity: "Common", multiplier: 1.0,
-        sprite: { body:"#9fa8b0", wing:"#7b8a96", beak:"#ffcc66", eye:"#ffffff", pupil:"#000000", accent:"#c0c8d0" } },
-      { id: "robin", name: "Robin", rarity: "Common", multiplier: 1.0,
-        sprite: { body:"#8b4513", wing:"#5a2e0f", beak:"#ffcc33", eye:"#ffffff", pupil:"#000000", accent:"#cc3300" } },
-      { id: "crow", name: "Crow", rarity: "Common", multiplier: 1.0,
-        sprite: { body:"#222222", wing:"#111111", beak:"#ffcc33", eye:"#ffffff", pupil:"#000000", accent:"#444444" } },
-      { id: "bluejay", name: "Blue Jay", rarity: "Uncommon", multiplier: 1.2,
-        sprite: { body:"#3b6cff", wing:"#2440aa", beak:"#333333", eye:"#ffffff", pupil:"#000000", accent:"#88aaff" } },
-      { id: "wren", name: "Wren", rarity: "Uncommon", multiplier: 1.2,
-        sprite: { body:"#a0703a", wing:"#7a4f24", beak:"#ffcc66", eye:"#ffffff", pupil:"#000000", accent:"#c09060" } },
-      { id: "canary", name: "Canary", rarity: "Rare", multiplier: 1.5,
-        sprite: { body:"#ffe94a", wing:"#e6c93a", beak:"#ffb300", eye:"#ffffff", pupil:"#000000", accent:"#fff799" } },
-      { id: "duck", name: "Duck", rarity: "Common", multiplier: 1.0,
-        sprite: { body:"#4caf50", wing:"#2e7d32", beak:"#ffb300", eye:"#ffffff", pupil:"#000000", accent:"#81c784" } },
-      { id: "seagull", name: "Seagull", rarity: "Common", multiplier: 1.0,
-        sprite: { body:"#f5f5f5", wing:"#cfd8dc", beak:"#ffb300", eye:"#ffffff", pupil:"#000000", accent:"#b0bec5" } },
-      { id: "magpie", name: "Magpie", rarity: "Uncommon", multiplier: 1.2,
-        sprite: { body:"#ffffff", wing:"#000000", beak:"#333333", eye:"#ffffff", pupil:"#000000", accent:"#4fc3f7" } },
-
-      { id: "woodpecker", name: "Woodpecker", rarity: "Rare", multiplier: 1.5,
-        sprite: { body:"#ffffff", wing:"#000000", beak:"#ffcc33", eye:"#ffffff", pupil:"#000000", accent:"#ff1744" } },
-      { id: "chickadee", name: "Chickadee", rarity: "Uncommon", multiplier: 1.2,
-        sprite: { body:"#d7ccc8", wing:"#8d6e63", beak:"#333333", eye:"#000000", pupil:"#000000", accent:"#bcaaa4" } },
-      { id: "kingfisher", name: "Kingfisher", rarity: "Mythic", multiplier: 7.0,
-        sprite: { body:"#0288d1", wing:"#01579b", beak:"#ff6f00", eye:"#ffffff", pupil:"#000000", accent:"#00bcd4" } },
-      { id: "hawk", name: "Hawk", rarity: "Rare", multiplier: 1.5,
-        sprite: { body:"#a1887f", wing:"#6d4c41", beak:"#ffb300", eye:"#ffffff", pupil:"#000000", accent:"#bcaaa4" } },
-      { id: "falcon", name: "Falcon", rarity: "Legendary", multiplier: 4.0,
-        sprite: { body:"#b0bec5", wing:"#78909c", beak:"#ffb300", eye:"#ffffff", pupil:"#000000", accent:"#cfd8dc" } },
-      { id: "eagle", name: "Eagle", rarity: "Legendary", multiplier: 4.0,
-        sprite: { body:"#5d4037", wing:"#3e2723", beak:"#ffb300", eye:"#ffffff", pupil:"#000000", accent:"#d7ccc8" } },
-      { id: "owl", name: "Owl", rarity: "Legendary", multiplier: 4.0,
-        sprite: { body:"#8d6e63", wing:"#5d4037", beak:"#ffb300", eye:"#ffffff", pupil:"#000000", accent:"#d7ccc8" } },
-      { id: "heron", name: "Heron", rarity: "Rare", multiplier: 1.5,
-        sprite: { body:"#cfd8dc", wing:"#90a4ae", beak:"#ffb300", eye:"#ffffff", pupil:"#000000", accent:"#b0bec5" } },
-      { id: "stork", name: "Stork", rarity: "Epic", multiplier: 2.0,
-        sprite: { body:"#ffffff", wing:"#cfd8dc", beak:"#ff7043", eye:"#000000", pupil:"#000000", accent:"#eceff1" } },
-      { id: "dove", name: "Dove", rarity: "Rare", multiplier: 1.5,
-        sprite: { body:"#f5f5f5", wing:"#e0e0e0", beak:"#ffb300", eye:"#000000", pupil:"#000000", accent:"#eeeeee" } },
-
-      { id: "parrot", name: "Parrot", rarity: "Rare", multiplier: 1.5,
-        sprite: { body:"#00c853", wing:"#009624", beak:"#ff6d00", eye:"#ffffff", pupil:"#000000", accent:"#ff1744" } },
-      { id: "macaw", name: "Macaw", rarity: "Rare", multiplier: 1.5,
-        sprite: { body:"#1976d2", wing:"#0d47a1", beak:"#ffb300", eye:"#ffffff", pupil:"#000000", accent:"#ff5252" } },
-      { id: "toucan", name: "Toucan", rarity: "Epic", multiplier: 2.0,
-        sprite: { body:"#000000", wing:"#212121", beak:"#ffca28", eye:"#ffffff", pupil:"#000000", accent:"#ff7043" } },
-      { id: "peacock", name: "Peacock", rarity: "Epic", multiplier: 2.0,
-        sprite: { body:"#00695c", wing:"#004d40", beak:"#ffb300", eye:"#ffffff", pupil:"#000000", accent:"#26c6da" } },
-      { id: "flamingo", name: "Flamingo", rarity: "Epic", multiplier: 2.0,
-        sprite: { body:"#ff80ab", wing:"#f06292", beak:"#ffffff", eye:"#000000", pupil:"#000000", accent:"#ff4081" } },
-      { id: "hummingbird", name: "Hummingbird", rarity: "Mythic", multiplier: 7.0,
-        sprite: { body:"#00c853", wing:"#009624", beak:"#ffb300", eye:"#ffffff", pupil:"#000000", accent:"#00e5ff" } },
-      { id: "kiwi", name: "Kiwi", rarity: "Rare", multiplier: 1.5,
-        sprite: { body:"#6d4c41", wing:"#4e342e", beak:"#ffb300", eye:"#000000", pupil:"#000000", accent:"#8d6e63" } },
-      { id: "puffin", name: "Puffin", rarity: "Mythic", multiplier: 7.0,
-        sprite: { body:"#000000", wing:"#212121", beak:"#ff7043", eye:"#ffffff", pupil:"#000000", accent:"#ffffff" } },
-      { id: "swan", name: "Swan", rarity: "Epic", multiplier: 2.0,
-        sprite: { body:"#ffffff", wing:"#e0e0e0", beak:"#ffb300", eye:"#000000", pupil:"#000000", accent:"#f5f5f5" } },
-      { id: "cockatoo", name: "Cockatoo", rarity: "Rare", multiplier: 1.5,
-        sprite: { body:"#ffffff", wing:"#eeeeee", beak:"#555555", eye:"#000000", pupil:"#000000", accent:"#fff176" } }
-    ];
-
-    // ---------- Eggs (pixel style) ----------
-    function drawEggForPack(packKey, cx, cy, crackLevel, shakeOffset) {
-      ctx.save();
-      ctx.translate(cx + shakeOffset, cy);
-
-      function eggBase(color, spotsColor) {
-        ctx.fillStyle = color;
-        // Body stack (blocky egg)
-        ctx.fillRect(-14, -20, 28, 40);
-        ctx.fillRect(-12, -22, 24, 4);
-        ctx.fillRect(-10, -24, 20, 4);
-        ctx.fillRect(-8, -26, 16, 4);
-        ctx.fillRect(-6, -28, 12, 4);
-
-        // Spots
-        ctx.fillStyle = spotsColor;
-        ctx.fillRect(-6, -10, 4, 4);
-        ctx.fillRect(4, -4, 4, 4);
-        ctx.fillRect(-2, 6, 4, 4);
-      }
-
-      if (packKey === "common") {
-        eggBase("#f5f5f5", "#b0bec5");
-      } else if (packKey === "forest") {
-        eggBase("#e8f5e9", "#66bb6a");
-      } else if (packKey === "exotic") {
-        eggBase("#e3f2fd", "#42a5f5");
-      } else if (packKey === "legendary") {
-        eggBase("#fff8e1", "#ffca28");
-      } else if (packKey === "ultra") {
-        eggBase("#212121", "#00e5ff");
-      }
-
-      // Pixelated cracks (no curves)
-      if (crackLevel > 0) {
-        ctx.fillStyle = "#000000";
-        // Top zig-zag crack
-        ctx.fillRect(-8, -6, 4, 2);
-        ctx.fillRect(-4, -4, 4, 2);
-        ctx.fillRect(0, -6, 4, 2);
-        ctx.fillRect(4, -4, 4, 2);
-        ctx.fillRect(8, -6, 4, 2);
-      }
-      if (crackLevel > 1) {
-        // Lower zig-zag crack
-        ctx.fillRect(-6, 4, 4, 2);
-        ctx.fillRect(-2, 6, 4, 2);
-        ctx.fillRect(2, 4, 4, 2);
-        ctx.fillRect(6, 6, 4, 2);
-      }
-
-      ctx.restore();
-    }
-
-    // ---------- Packs (now Eggs) ----------
-    const packs = {
-      common: {
-        name: "Common Egg",
-        cost: 50,
-        pool: [
-          { id:"sparrow", weight:40 },
-          { id:"pigeon", weight:30 },
-          { id:"robin", weight:20 },
-          { id:"crow", weight:8 },
-          { id:"wren", weight:2 }
-        ]
-      },
-      forest: {
-        name: "Forest Egg",
-        cost: 100,
-        pool: [
-          { id:"bluejay", weight:40 },
-          { id:"woodpecker", weight:30 },
-          { id:"chickadee", weight:20 },
-          { id:"magpie", weight:8 },
-          { id:"canary", weight:2 }
-        ]
-      },
-      exotic: {
-        name: "Exotic Egg",
-        cost: 200,
-        pool: [
-          { id:"parrot", weight:40 },
-          { id:"toucan", weight:30 },
-          { id:"macaw", weight:20 },
-          { id:"peacock", weight:8 },
-          { id:"flamingo", weight:2 }
-        ]
-      },
-      legendary: {
-        name: "Legendary Egg",
-        cost: 500,
-        pool: [
-          { id:"eagle", weight:40 },
-          { id:"falcon", weight:30 },
-          { id:"owl", weight:20 },
-          { id:"hummingbird", weight:8 },
-          { id:"kingfisher", weight:2 }
-        ]
-      },
-      ultra: {
-        name: "Ultra Egg",
-        cost: 1000,
-        pool: [
-          { id:"kiwi", weight:40 },
-          { id:"puffin", weight:30 },
-          { id:"swan", weight:20 },
-          { id:"cockatoo", weight:8 },
-          { id:"stork", weight:2 }
-        ]
-      }
-    };
-
-    // ---------- Difficulty ----------
-    let difficulty = "normal";
-
-    const difficultySettings = {
-      easy: {
-        pipeSpeed: 1.6,
-        gap: 170,
-        gravity: 0.35,
-        lift: -7.5,
-        coinMult: 1
-      },
-      normal: {
-        pipeSpeed: 2,
-        gap: 140,
-        gravity: 0.4,
-        lift: -7,
-        coinMult: 1
-      },
-      hard: {
-        pipeSpeed: 2.6,
-        gap: 120,
-        gravity: 0.45,
-        lift: -6.5,
-        coinMult: 1.5
-      }
-    };
-
-    // ---------- Game state ----------
-    let bird = { x:50, y:150, width:20, height:20, gravity:0.4, lift:-7, velocity:0 };
-    let bird2 = { x:80, y:150, width:20, height:20, gravity:0.4, lift:-7, velocity:0 };
-
-    let pipes = [];
+    // ---------- Core game state ----------
+    let gameState = "mainMenu"; // mainMenu, mapSelect, index, shop, roll, countdown, playing, playingMulti, dead
     let frame = 0;
 
-    let gameState = "mainMenu";
+    const GAME_SETTINGS = {
+      gravity: 0.4,
+      lift: -7,
+      pipeSpeed: 2,
+      gap: 140,
+      coinMult: 1
+    };
+
+    let score = 0;
+    let highScore = 0;
+    let coins = 0;
 
     let countdown = 3;
     let isMultiplayer = false;
 
-    let score = 0;
-    let highScore = Number(localStorage.getItem("flappyHighScore")) || 0;
-    let coins = Number(localStorage.getItem("flappyCoins")) || 0;
-
-    let unlockedBirdIds = JSON.parse(localStorage.getItem("flappyUnlockedBirds") || "[]");
-    if (unlockedBirdIds.length === 0) {
-      unlockedBirdIds = ["sparrow"];
-    }
-    let equippedBirdId = localStorage.getItem("flappyEquippedBird") || "sparrow";
-
-    let lastRolledBird = null;
-    let lastRollNew = false;
-    let lastRollPackKey = null;
-
-    let rollAnim = {
-      timer: 0,
-      phase: "egg",
-      stars: []
+    // ---------- Bird data ----------
+    const rarityColors = {
+      Common: "#b0bec5",
+      Uncommon: "#66bb6a",
+      Rare: "#42a5f5",
+      Epic: "#ab47bc",
+      Legendary: "#ffb300",
+      Mythic: "#ff5252"
     };
 
-    let menuButtons = {};
-    let indexBackButton = null;
-    let shopBackButton = null;
-    let packButtons = {};
-    let mapButtons = {};
-    let settingsButtons = {};
-    let jumpButton = { x: canvas.width - 90, y: canvas.height - 90, w: 70, h: 70 };
+    const allBirds = [
+      { id: 1, name: "Classic", rarity: "Common", multiplier: 1.0,
+        sprite: { body:"#ffeb3b", wing:"#fbc02d", eye:"#ffffff", pupil:"#000000", beak:"#ff9800", accent:"#fff176" } },
+      { id: 2, name: "Sky Blue", rarity: "Uncommon", multiplier: 1.1,
+        sprite: { body:"#29b6f6", wing:"#0288d1", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#4fc3f7" } },
+      { id: 3, name: "Emerald", rarity: "Rare", multiplier: 1.2,
+        sprite: { body:"#66bb6a", wing:"#2e7d32", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#a5d6a7" } },
+      { id: 4, name: "Amethyst", rarity: "Epic", multiplier: 1.4,
+        sprite: { body:"#ab47bc", wing:"#6a1b9a", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#ce93d8" } },
+      { id: 5, name: "Phoenix", rarity: "Legendary", multiplier: 1.7,
+        sprite: { body:"#ff7043", wing:"#e64a19", eye:"#ffffff", pupil:"#000000", beak:"#ffca28", accent:"#ffab91" } },
+      { id: 6, name: "Celestial", rarity: "Mythic", multiplier: 2.0,
+        sprite: { body:"#b39ddb", wing:"#7e57c2", eye:"#ffffff", pupil:"#000000", beak:"#ffca28", accent:"#d1c4e9" } }
+    ];
 
-    let indexScroll = 0;
-    let indexScrollMax = 0;
+    let unlockedBirdIds = [1];
+    let equippedBirdId = 1;
 
-    let indexSortMode = "rarity";
-    let indexFilterRarity = "All";
-
-    let jumpParticles = [];
-
-    let jungleLeaves = [];
-    let snowflakes = [];
-    let neonPulse = 0;
-    let crystalSparkles = [];
-    let nightFlicker = 0;
-
-    let scorePops = [];
-
-    // ---------- Helpers ----------
     function getBirdById(id) {
       return allBirds.find(b => b.id === id);
     }
@@ -373,70 +83,169 @@
     function getBirdMultiplier() {
       return getEquippedBird().multiplier;
     }
-    function saveProgress() {
-      localStorage.setItem("flappyHighScore", highScore);
-      localStorage.setItem("flappyCoins", coins);
-      localStorage.setItem("flappyUnlockedBirds", JSON.stringify(unlockedBirdIds));
-      localStorage.setItem("flappyEquippedBird", equippedBirdId);
-    }
 
-    function rollFromPack(packKey) {
-      const pack = packs[packKey];
-      let total = pack.pool.reduce((s,p)=>s+p.weight,0);
-      let r = Math.random()*total;
-      for (let entry of pack.pool) {
-        if (r < entry.weight) return entry.id;
-        r -= entry.weight;
+    // ---------- Packs ----------
+    const packs = {
+      basic: {
+        name: "Basic Egg",
+        cost: 20,
+        pool: [1,1,1,1,2,2,3]
+      },
+      premium: {
+        name: "Premium Egg",
+        cost: 80,
+        pool: [2,2,3,3,4,4,5]
+      },
+      mythic: {
+        name: "Mythic Egg",
+        cost: 200,
+        pool: [3,4,4,5,5,6]
       }
-      return pack.pool[pack.pool.length-1].id;
+    };
+
+    function rollFromPack(key) {
+      const p = packs[key];
+      const pool = p.pool;
+      return pool[Math.floor(Math.random()*pool.length)];
     }
 
-    // ---------- Decorations + map animations ----------
+    // ---------- Bird objects ----------
+    const bird = {
+      x: 80,
+      y: 150,
+      width: 20,
+      height: 20,
+      velocity: 0,
+      gravity: GAME_SETTINGS.gravity,
+      lift: GAME_SETTINGS.lift
+    };
+
+    const bird2 = {
+      x: 280,
+      y: 150,
+      width: 20,
+      height: 20,
+      velocity: 0,
+      gravity: GAME_SETTINGS.gravity,
+      lift: GAME_SETTINGS.lift
+    };
+
+    // ---------- Pipes ----------
+    let pipes = [];
+
+    // ---------- Particles ----------
+    let jumpParticles = [];
+    let scorePops = [];
+
+    // ---------- Map decorations ----------
+    let jungleLeaves = [];
+    let snowflakes = [];
+    let crystalSparkles = [];
+    let neonPulse = 0;
+    let nightFlicker = 0;
+
+    const maps = {
+      day: {
+        name: "Sunny Plains",
+        bg: "#4fc3f7",
+        ground: "#8bc34a",
+        pipeMain: "#4caf50",
+        pipeLip: "#2e7d32",
+        deco: "clouds"
+      },
+      night: {
+        name: "Starry Night",
+        bg: "#0d47a1",
+        ground: "#1b5e20",
+        pipeMain: "#263238",
+        pipeLip: "#37474f",
+        deco: "stars"
+      },
+      lava: {
+        name: "Lava Caves",
+        bg: "#3e2723",
+        ground: "#5d4037",
+        pipeMain: "#6d4c41",
+        pipeLip: "#4e342e",
+        deco: "lava"
+      },
+      jungle: {
+        name: "Jungle Ruins",
+        bg: "#1b5e20",
+        ground: "#33691e",
+        pipeMain: "#2e7d32",
+        pipeLip: "#1b5e20",
+        deco: "jungleLeaves"
+      },
+      neon: {
+        name: "Neon City",
+        bg: "#000018",
+        ground: "#1a237e",
+        pipeMain: "#00e5ff",
+        pipeLip: "#00b0ff",
+        deco: "neonCity"
+      },
+      crystal: {
+        name: "Crystal Cavern",
+        bg: "#1a237e",
+        ground: "#283593",
+        pipeMain: "#4fc3f7",
+        pipeLip: "#0288d1",
+        deco: "crystals"
+      },
+      snow: {
+        name: "Snowy Peaks",
+        bg: "#90caf9",
+        ground: "#e0e0e0",
+        pipeMain: "#90a4ae",
+        pipeLip: "#78909c",
+        deco: "snow"
+      }
+    };
+
+    let selectedMap = "day";
+
     function initMapAnimations() {
       jungleLeaves = [];
-      for (let i=0;i<20;i++) {
+      snowflakes = [];
+      crystalSparkles = [];
+      neonPulse = 0;
+      nightFlicker = 0;
+
+      for (let i=0;i<40;i++) {
         jungleLeaves.push({
           x: Math.random()*canvas.width,
-          y: Math.random()*canvas.height,
-          speed: 0.5 + Math.random()*0.7
+          y: 350 + Math.random()*200
         });
       }
-      snowflakes = [];
-      for (let i=0;i<40;i++) {
+
+      for (let i=0;i<80;i++) {
         snowflakes.push({
           x: Math.random()*canvas.width,
-          y: Math.random()*canvas.height,
-          speed: 0.5 + Math.random()*1.0
+          y: Math.random()*canvas.height
         });
       }
-      crystalSparkles = [];
-      for (let i=0;i<25;i++) {
+
+      for (let i=0;i<40;i++) {
         crystalSparkles.push({
           x: Math.random()*canvas.width,
-          y: 350 + Math.random()*200,
+          y: 380 + Math.random()*200,
           phase: Math.random()*Math.PI*2
         });
       }
-      neonPulse = 0;
-      nightFlicker = 0;
     }
+
     initMapAnimations();
 
     function updateMapAnimations() {
-      jungleLeaves.forEach(l => {
-        l.y += l.speed;
-        if (l.y > canvas.height+10) {
-          l.y = -10;
-          l.x = Math.random()*canvas.width;
-        }
-      });
       snowflakes.forEach(s => {
-        s.y += s.speed;
-        if (s.y > canvas.height+5) {
+        s.y += 0.5;
+        if (s.y > canvas.height) {
           s.y = -5;
           s.x = Math.random()*canvas.width;
         }
       });
+
       neonPulse += 0.05;
       crystalSparkles.forEach(c => {
         c.phase += 0.05;
@@ -449,10 +258,11 @@
 
       if (deco === "clouds") {
         ctx.fillStyle = "white";
-        // Replace round clouds with blocky clouds
-        ctx.fillRect(70, 70, 60, 10);
-        ctx.fillRect(60, 80, 80, 10);
-        ctx.fillRect(75, 90, 50, 10);
+        ctx.beginPath();
+        ctx.arc(80, 80, 25, 0, Math.PI * 2);
+        ctx.arc(110, 80, 35, 0, Math.PI * 2);
+        ctx.arc(140, 80, 25, 0, Math.PI * 2);
+        ctx.fill();
       }
 
       if (deco === "stars") {
@@ -473,8 +283,9 @@
       if (deco === "jungleLeaves") {
         ctx.fillStyle = "#2e7d32";
         jungleLeaves.forEach(l => {
-          // Blocky leaves instead of ellipse
-          ctx.fillRect(l.x - 4, l.y - 6, 8, 12);
+          ctx.beginPath();
+          ctx.ellipse(l.x, l.y, 6, 12, 0.5, 0, Math.PI*2);
+          ctx.fill();
         });
       }
 
@@ -514,8 +325,9 @@
       if (deco === "snow") {
         ctx.fillStyle = "#e3f2fd";
         snowflakes.forEach(s => {
-          // Blocky snowflakes instead of arcs
-          ctx.fillRect(s.x-1, s.y-1, 2, 2);
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, 2, 0, Math.PI*2);
+          ctx.fill();
         });
       }
     }
@@ -617,7 +429,36 @@
       });
     }
 
-    // ---------- Updates ----------
+    // ---------- Progress save/load ----------
+    function saveProgress() {
+      const data = {
+        coins,
+        highScore,
+        unlockedBirdIds,
+        equippedBirdId
+      };
+      try {
+        localStorage.setItem("flappyDeluxeSave", JSON.stringify(data));
+      } catch(e) {}
+    }
+
+    function loadProgress() {
+      try {
+        const raw = localStorage.getItem("flappyDeluxeSave");
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (typeof data.coins === "number") coins = data.coins;
+        if (typeof data.highScore === "number") highScore = data.highScore;
+        if (Array.isArray(data.unlockedBirdIds)) unlockedBirdIds = data.unlockedBirdIds;
+        if (typeof data.equippedBirdId === "number") equippedBirdId = data.equippedBirdId;
+      } catch(e) {}
+    }
+
+    loadProgress();
+
+    // ---------- Game reset ----------
+    let jumpButton = { x: canvas.width - 90, y: canvas.height - 90, w: 70, h: 70 };
+
     function resetGame() {
       bird.y = 150;
       bird.velocity = 0;
@@ -629,11 +470,10 @@
       jumpParticles = [];
       scorePops = [];
 
-      const d = difficultySettings[difficulty];
-      bird.gravity = d.gravity;
-      bird.lift = d.lift;
-      bird2.gravity = d.gravity;
-      bird2.lift = d.lift;
+      bird.gravity = GAME_SETTINGS.gravity;
+      bird.lift = GAME_SETTINGS.lift;
+      bird2.gravity = GAME_SETTINGS.gravity;
+      bird2.lift = GAME_SETTINGS.lift;
 
       jumpButton = { x: canvas.width - 90, y: canvas.height - 90, w: 70, h: 70 };
     }
@@ -647,10 +487,10 @@
     }
 
     function updatePipes() {
-      pipes.forEach(p => p.x -= difficultySettings[difficulty].pipeSpeed);
+      pipes.forEach(p => p.x -= GAME_SETTINGS.pipeSpeed);
 
       if (frame % 120 === 0) {
-        let gap = difficultySettings[difficulty].gap;
+        let gap = GAME_SETTINGS.gap;
         let top = Math.random() * (canvas.height - gap - 100) + 20;
         pipes.push({
           x: canvas.width + 40,
@@ -688,11 +528,11 @@
       });
     }
 
+    // ---------- End run ----------
     function endRun() {
       gameState = "dead";
-      const d = difficultySettings[difficulty];
       const finalScore = Math.floor(score * getBirdMultiplier());
-      const earned = Math.floor(score * getBirdMultiplier() * 2 * d.coinMult);
+      const earned = Math.floor(score * getBirdMultiplier() * 2 * GAME_SETTINGS.coinMult);
       coins += earned;
       saveProgress();
     }
@@ -734,18 +574,48 @@
 
       ctx.font = "24px Arial";
       const finalScore = Math.floor(score * getBirdMultiplier());
-      const d = difficultySettings[difficulty];
-      const earnedCoins = Math.floor(score * getBirdMultiplier() * 2 * d.coinMult);
+      const earnedCoins = Math.floor(score * getBirdMultiplier() * 2 * GAME_SETTINGS.coinMult);
 
       ctx.fillText("Score: " + score, 140, 280);
       ctx.fillText("Mult: x" + getBirdMultiplier(), 140, 310);
       ctx.fillText("Final: " + finalScore, 140, 340);
       ctx.fillText("High Score: " + highScore, 120, 370);
-      ctx.fillText("Difficulty: " + difficulty.toUpperCase(), 120, 400);
-      ctx.fillText("Coins Earned: " + earnedCoins, 110, 430);
+      ctx.fillText("Coins Earned: " + earnedCoins, 110, 400);
 
       ctx.font = "20px Arial";
-      ctx.fillText("Press any key to return to menu", 60, 470);
+      ctx.fillText("Press any key to return to menu", 60, 450);
+    }
+
+    // ---------- Menus & buttons ----------
+    let menuButtons = {};
+    let mapButtons = {};
+    let packButtons = {};
+    let indexBackButton = null;
+    let shopBackButton = null;
+    let settingsButtons = {};
+
+    // scrolling state (momentum) per screen
+    let scrollMain = 0, scrollMainVel = 0, scrollMainMax = 0;
+    let scrollMap = 0, scrollMapVel = 0, scrollMapMax = 0;
+    let indexScroll = 0, indexScrollVel = 0, indexScrollMax = 0;
+    let shopScroll = 0, shopScrollVel = 0, shopScrollMax = 0;
+    let settingsScroll = 0, settingsScrollVel = 0, settingsScrollMax = 0; // kept for completeness
+
+    const SCROLL_FRICTION = 0.94;
+    const SCROLL_SPEED = 0.4;
+
+    function applyMomentumScroll(scroll, vel, max) {
+      scroll += vel;
+      vel *= SCROLL_FRICTION;
+      if (scroll < 0) {
+        scroll = 0;
+        vel = 0;
+      }
+      if (scroll > max) {
+        scroll = max;
+        vel = 0;
+      }
+      return { scroll, vel };
     }
 
     // ---------- Main menu ----------
@@ -756,13 +626,15 @@
 
       const idleOffset = Math.sin(frame/30)*3;
 
+      ctx.save();
+      ctx.translate(0, -scrollMain);
+
       ctx.fillStyle = "white";
       ctx.font = "32px Arial";
       ctx.fillText("Flappy Bird Deluxe", 40, 120);
 
       drawCoins();
 
-      // Buttons (square corners)
       ctx.fillStyle = "white";
       ctx.fillRect(80, 160, 240, 60);
       ctx.fillStyle = "black";
@@ -789,19 +661,12 @@
       ctx.fillStyle = "black";
       ctx.fillText("Map Select", 135, 518);
 
-      ctx.fillStyle = "white";
-      ctx.fillRect(10, 10, 100, 40);
-      ctx.fillStyle = "black";
-      ctx.font = "18px Arial";
-      ctx.fillText("Settings", 20, 38);
-
       menuButtons = {
         single: { x:80, y:160, w:240, h:60 },
         multi:  { x:80, y:240, w:240, h:60 },
         index:  { x:80, y:320, w:240, h:60 },
         shop:   { x:80, y:400, w:240, h:60 },
-        map:    { x:80, y:480, w:240, h:60 },
-        settings: { x:10, y:10, w:100, h:40 }
+        map:    { x:80, y:480, w:240, h:60 }
       };
 
       ctx.fillStyle = "white";
@@ -809,42 +674,20 @@
       ctx.fillText("Equipped:", 10, 560);
       drawBirdSprite(getEquippedBird(), 110, 550 + idleOffset);
 
-      const diffY = canvas.height - 80;
-      const btnW = 90;
-      const btnH = 40;
-      const spacing = 20;
-      const totalWidth = btnW * 3 + spacing * 2;
-      const startX = (canvas.width - totalWidth) / 2;
+      ctx.restore();
 
-      ctx.fillStyle = "white";
-      ctx.font = "22px Arial";
-      ctx.fillText("Difficulty", canvas.width / 2 - 50, diffY - 10);
-
-      ctx.fillStyle = difficulty === "easy" ? "#00e676" : "white";
-      ctx.fillRect(startX, diffY, btnW, btnH);
-      ctx.fillStyle = "black";
-      ctx.font = "20px Arial";
-      ctx.fillText("Easy", startX + 22, diffY + 26);
-
-      ctx.fillStyle = difficulty === "normal" ? "#00e676" : "white";
-      ctx.fillRect(startX + btnW + spacing, diffY, btnW, btnH);
-      ctx.fillStyle = "black";
-      ctx.fillText("Normal", startX + btnW + spacing + 10, diffY + 26);
-
-      ctx.fillStyle = difficulty === "hard" ? "#00e676" : "white";
-      ctx.fillRect(startX + (btnW + spacing) * 2, diffY, btnW, btnH);
-      ctx.fillStyle = "black";
-      ctx.fillText("Hard", startX + (btnW + spacing) * 2 + 22, diffY + 26);
-
-      menuButtons.diffEasy = { x:startX, y:diffY, w:btnW, h:btnH };
-      menuButtons.diffNormal = { x:startX + btnW + spacing, y:diffY, w:btnW, h:btnH };
-      menuButtons.diffHard = { x:startX + (btnW + spacing) * 2, y:diffY, w:btnW, h:btnH };
+      // content height for scroll
+      const contentBottom = 560 + 40;
+      scrollMainMax = Math.max(0, contentBottom - canvas.height);
     }
 
     // ---------- Map select ----------
     function drawMapSelect() {
       ctx.fillStyle = "#222";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(0, -scrollMap);
 
       ctx.fillStyle = "white";
       ctx.font = "36px Arial";
@@ -868,9 +711,17 @@
       ctx.fillStyle = "black";
       ctx.font = "20px Arial";
       ctx.fillText("Back", 40, 48);
+
+      ctx.restore();
+
+      const contentBottom = y;
+      scrollMapMax = Math.max(0, contentBottom - canvas.height);
     }
 
     // ---------- Bird Index (sortable + filter) ----------
+    let indexSortMode = "rarity";
+    let indexFilterRarity = "All";
+
     function getSortedFilteredBirds() {
       let list = allBirds.slice();
 
@@ -893,6 +744,9 @@
     function drawBirdIndex() {
       ctx.fillStyle = "#222";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(0, -indexScroll);
 
       ctx.fillStyle = "white";
       ctx.font = "36px Arial";
@@ -948,9 +802,9 @@
         let row = Math.floor(i / birdsPerRow);
 
         let x = startX + col * (boxSize + padding);
-        let y = startY + row * (boxSize + 70) - indexScroll;
+        let y = startY + row * (boxSize + 70);
 
-        if (y > -150 && y < canvas.height + 150) {
+        if (y > -150 && y < canvas.height + 150 + indexScrollMax) {
           const unlocked = unlockedBirdIds.includes(birdObj.id);
 
           ctx.fillStyle = unlocked ? "#ffffff" : "#555555";
@@ -991,12 +845,17 @@
       ctx.fillText("Back", 40, 48);
 
       indexBackButton = { x:20, y:20, w:80, h:40 };
+
+      ctx.restore();
     }
 
     // ---------- Shop / Eggs ----------
     function drawShop() {
       ctx.fillStyle = "#111";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(0, -shopScroll);
 
       ctx.fillStyle = "white";
       ctx.font = "32px Arial";
@@ -1027,9 +886,54 @@
       ctx.fillText("Back", 40, 48);
 
       shopBackButton = { x:20, y:20, w:80, h:40 };
+
+      ctx.restore();
+
+      const contentBottom = y;
+      shopScrollMax = Math.max(0, contentBottom - canvas.height);
+    }
+
+    // ---------- Egg drawing (pixelated style) ----------
+    function drawEggForPack(packKey, cx, cy, crackLevel, shake) {
+      const colors = {
+        basic: "#ffffff",
+        premium: "#ffeb3b",
+        mythic: "#b39ddb"
+      };
+      const c = colors[packKey] || "#ffffff";
+
+      const size = 40;
+      const x = cx - size/2 + (shake || 0);
+      const y = cy - size/2;
+
+      ctx.fillStyle = c;
+      ctx.fillRect(x+10, y+5, 20, 30);
+      ctx.fillRect(x+8, y+10, 24, 20);
+      ctx.fillRect(x+12, y+2, 16, 6);
+
+      if (crackLevel >= 1) {
+        ctx.fillStyle = "#555";
+        ctx.fillRect(x+15, y+18, 2, 6);
+        ctx.fillRect(x+19, y+22, 2, 6);
+        ctx.fillRect(x+23, y+18, 2, 6);
+      }
+      if (crackLevel >= 2) {
+        ctx.fillStyle = "#333";
+        ctx.fillRect(x+14, y+24, 4, 4);
+        ctx.fillRect(x+22, y+24, 4, 4);
+      }
     }
 
     // ---------- Rarity star burst ----------
+    let rollAnim = {
+      timer: 0,
+      phase: "egg",
+      stars: []
+    };
+    let lastRolledBird = null;
+    let lastRollPackKey = null;
+    let lastRollNew = false;
+
     function spawnRarityStars(birdObj) {
       rollAnim.stars = [];
       let count = 5;
@@ -1069,10 +973,13 @@
         const alpha = s.life/40;
         ctx.globalAlpha = alpha;
         ctx.fillStyle = s.color;
-        // Pixel diamond-ish star
-        ctx.fillRect(s.x-2, s.y-4, 4, 2);
-        ctx.fillRect(s.x-4, s.y-2, 8, 2);
-        ctx.fillRect(s.x-2, s.y, 4, 2);
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y-4);
+        ctx.lineTo(s.x+3, s.y);
+        ctx.lineTo(s.x, s.y+4);
+        ctx.lineTo(s.x-3, s.y);
+        ctx.closePath();
+        ctx.fill();
         ctx.globalAlpha = 1;
       });
     }
@@ -1152,44 +1059,6 @@
       }
     }
 
-    // ---------- Settings screen ----------
-    function drawSettings() {
-      ctx.fillStyle = "#111";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = "white";
-      ctx.font = "32px Arial";
-      ctx.fillText("Settings", 140, 80);
-
-      ctx.font = "20px Arial";
-      ctx.fillText("Screen Size:", 40, 150);
-
-      ctx.fillStyle = (canvas.width === 400 && canvas.height === 600) ? "#00e676" : "white";
-      ctx.fillRect(40, 180, 120, 40);
-      ctx.fillStyle = "black";
-      ctx.fillText("400x600", 50, 208);
-
-      ctx.fillStyle = (canvas.width === 500 && canvas.height === 750) ? "#00e676" : "white";
-      ctx.fillRect(180, 180, 120, 40);
-      ctx.fillStyle = "black";
-      ctx.fillText("500x750", 190, 208);
-
-      ctx.fillStyle = (canvas.width === 600 && canvas.height === 900) ? "#00e676" : "white";
-      ctx.fillRect(320, 180, 120, 40);
-      ctx.fillStyle = "black";
-      ctx.fillText("600x900", 330, 208);
-
-      settingsButtons.size1 = { x:40, y:180, w:120, h:40 };
-      settingsButtons.size2 = { x:180, y:180, w:120, h:40 };
-      settingsButtons.size3 = { x:320, y:180, w:120, h:40 };
-
-      ctx.fillStyle = "white";
-      ctx.fillRect(20, 20, 80, 40);
-      ctx.fillStyle = "black";
-      ctx.font = "20px Arial";
-      ctx.fillText("Back", 40, 48);
-    }
-
     // ---------- Countdown ----------
     function countdownTick() {
       countdown--;
@@ -1220,13 +1089,22 @@
       }
     });
 
+    // momentum scroll on canvas only
     canvas.addEventListener("wheel", (e) => {
-      if (gameState === "index") {
-        indexScroll += e.deltaY * 0.5;
-        if (indexScroll < 0) indexScroll = 0;
-        if (indexScroll > indexScrollMax) indexScroll = indexScrollMax;
+      e.preventDefault();
+
+      const dy = e.deltaY * SCROLL_SPEED;
+
+      if (gameState === "mainMenu") {
+        scrollMainVel += dy;
+      } else if (gameState === "mapSelect") {
+        scrollMapVel += dy;
+      } else if (gameState === "index") {
+        indexScrollVel += dy;
+      } else if (gameState === "shop") {
+        shopScrollVel += dy;
       }
-    });
+    }, { passive:false });
 
     canvas.addEventListener("click", (e) => {
       const rect = canvas.getBoundingClientRect();
@@ -1247,63 +1125,58 @@
       }
 
       if (gameState === "mainMenu") {
-        if (inside(mx,my,menuButtons.single)) {
+        const myAdj = my + scrollMain;
+
+        if (inside(mx,myAdj,menuButtons.single)) {
           resetGame();
           isMultiplayer = false;
           countdown = 3;
           gameState = "countdown";
           setTimeout(countdownTick, 1000);
-        } else if (inside(mx,my,menuButtons.multi)) {
+        } else if (inside(mx,myAdj,menuButtons.multi)) {
           resetGame();
           isMultiplayer = true;
           countdown = 3;
           gameState = "countdown";
           setTimeout(countdownTick, 1000);
-        } else if (inside(mx,my,menuButtons.index)) {
+        } else if (inside(mx,myAdj,menuButtons.index)) {
           gameState = "index";
-        } else if (inside(mx,my,menuButtons.shop)) {
+        } else if (inside(mx,myAdj,menuButtons.shop)) {
           gameState = "shop";
-        } else if (inside(mx,my,menuButtons.map)) {
+        } else if (inside(mx,myAdj,menuButtons.map)) {
           gameState = "mapSelect";
-        } else if (inside(mx,my,menuButtons.settings)) {
-          gameState = "settings";
-        }
-
-        if (inside(mx,my,menuButtons.diffEasy)) {
-          difficulty = "easy";
-        }
-        if (inside(mx,my,menuButtons.diffNormal)) {
-          difficulty = "normal";
-        }
-        if (inside(mx,my,menuButtons.diffHard)) {
-          difficulty = "hard";
         }
 
       } else if (gameState === "mapSelect") {
-        if (inside(mx,my,{x:20,y:20,w:80,h:40})) {
+        const myAdj = my + scrollMap;
+        if (inside(mx,myAdj,{x:20,y:20,w:80,h:40})) {
           gameState = "mainMenu";
           return;
         }
         for (let key of Object.keys(mapButtons)) {
-          if (inside(mx,my,mapButtons[key])) {
+          if (inside(mx,myAdj,mapButtons[key])) {
             selectedMap = key;
+            initMapAnimations();
             gameState = "mainMenu";
             return;
           }
         }
+
       } else if (gameState === "index") {
-        if (inside(mx,my,indexBackButton)) {
+        const myAdj = my + indexScroll;
+
+        if (inside(mx,myAdj,indexBackButton)) {
           gameState = "mainMenu";
           return;
         }
 
-        if (inside(mx,my,settingsButtons.indexSortRarity)) {
+        if (inside(mx,myAdj,settingsButtons.indexSortRarity)) {
           indexSortMode = "rarity";
-        } else if (inside(mx,my,settingsButtons.indexSortName)) {
+        } else if (inside(mx,myAdj,settingsButtons.indexSortName)) {
           indexSortMode = "name";
-        } else if (inside(mx,my,settingsButtons.indexSortMult)) {
+        } else if (inside(mx,myAdj,settingsButtons.indexSortMult)) {
           indexSortMode = "mult";
-        } else if (inside(mx,my,settingsButtons.indexFilter)) {
+        } else if (inside(mx,myAdj,settingsButtons.indexFilter)) {
           const order = ["All","Common","Uncommon","Rare","Epic","Legendary","Mythic"];
           let idx = order.indexOf(indexFilterRarity);
           idx = (idx + 1) % order.length;
@@ -1322,11 +1195,11 @@
             let row = Math.floor(i / birdsPerRow);
 
             let x = startX + col * (boxSize + padding);
-            let y = startY + row * (boxSize + 70) - indexScroll;
+            let y = startY + row * (boxSize + 70);
 
             let box = { x:x, y:y, w:boxSize, h:boxSize };
 
-            if (inside(mx,my,box)) {
+            if (inside(mx,myAdj,box)) {
               const b = birdsToShow[i];
               if (unlockedBirdIds.includes(b.id)) {
                 equippedBirdId = b.id;
@@ -1337,12 +1210,13 @@
         }
 
       } else if (gameState === "shop") {
-        if (inside(mx,my,shopBackButton)) {
+        const myAdj = my + shopScroll;
+        if (inside(mx,myAdj,shopBackButton)) {
           gameState = "mainMenu";
           return;
         }
         for (let key of Object.keys(packButtons)) {
-          if (inside(mx,my,packButtons[key])) {
+          if (inside(mx,myAdj,packButtons[key])) {
             const pack = packs[key];
             if (coins >= pack.cost) {
               coins -= pack.cost;
@@ -1368,40 +1242,32 @@
         if (rollAnim.phase === "reveal") {
           gameState = "shop";
         }
-      } else if (gameState === "settings") {
-        if (inside(mx,my,{x:20,y:20,w:80,h:40})) {
-          gameState = "mainMenu";
-          return;
-        }
-        if (inside(mx,my,settingsButtons.size1)) {
-          canvas.width = 400;
-          canvas.height = 600;
-          resetGame();
-          initMapAnimations();
-        }
-        if (inside(mx,my,settingsButtons.size2)) {
-          canvas.width = 500;
-          canvas.height = 750;
-          resetGame();
-          initMapAnimations();
-        }
-        if (inside(mx,my,settingsButtons.size3)) {
-          canvas.width = 600;
-          canvas.height = 900;
-          resetGame();
-          initMapAnimations();
-        }
       }
     });
 
     function inside(mx,my,btn) {
       if (!btn) return false;
-      return mx > btn.x && mx < btn.x+btn.w && my > btn.y && my < btn.h+btn.y;
+      return mx > btn.x && mx < btn.x+btn.w && my > btn.y && my < btn.y+btn.h;
     }
 
     // ---------- Main loop ----------
     function loop() {
       updateMapAnimations();
+
+      // apply momentum scroll
+      if (gameState === "mainMenu") {
+        const r = applyMomentumScroll(scrollMain, scrollMainVel, scrollMainMax);
+        scrollMain = r.scroll; scrollMainVel = r.vel;
+      } else if (gameState === "mapSelect") {
+        const r = applyMomentumScroll(scrollMap, scrollMapVel, scrollMapMax);
+        scrollMap = r.scroll; scrollMapVel = r.vel;
+      } else if (gameState === "index") {
+        const r = applyMomentumScroll(indexScroll, indexScrollVel, indexScrollMax);
+        indexScroll = r.scroll; indexScrollVel = r.vel;
+      } else if (gameState === "shop") {
+        const r = applyMomentumScroll(shopScroll, shopScrollVel, shopScrollMax);
+        shopScroll = r.scroll; shopScrollVel = r.vel;
+      }
 
       if (gameState === "mainMenu") {
         drawMainMenu();
@@ -1434,13 +1300,6 @@
       if (gameState === "roll") {
         updateRollAnimation();
         drawRollScreen();
-        frame++;
-        requestAnimationFrame(loop);
-        return;
-      }
-
-      if (gameState === "settings") {
-        drawSettings();
         frame++;
         requestAnimationFrame(loop);
         return;
