@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Flappy Bird Deluxe</title>
+  <title>Flappy Bird Deluxe - Biome Birds</title>
   <style>
     body {
       margin: 0;
@@ -22,768 +22,1337 @@
   </style>
 </head>
 <body>
-  <canvas id="game" width="400" height="600"></canvas>
-  <script>
-    const canvas = document.getElementById("game");
-    const ctx = canvas.getContext("2d");
+<canvas id="game" width="400" height="600"></canvas>
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-    // ---------- Core game state ----------
-    let gameState = "mainMenu"; // mainMenu, mapSelect, index, shop, roll, countdown, playing, playingMulti, dead
-    let frame = 0;
+/* ---------------- CORE STATE ---------------- */
 
-    const GAME_SETTINGS = {
-      gravity: 0.4,
-      lift: -7,
-      pipeSpeed: 2,
-      gap: 140,
-      coinMult: 1
-    };
+let gameState = "mainMenu"; // mainMenu, mapSelect, index, shop, roll, countdown, playing, playingMulti, dead
+let frame = 0;
 
-    let score = 0;
-    let highScore = 0;
-    let coins = 0;
+const GAME_SETTINGS = {
+  gravity: 0.4,
+  lift: -7,
+  pipeSpeed: 2,
+  gap: 140,
+  coinMult: 1
+};
 
-    let countdown = 3;
-    let isMultiplayer = false;
+let score = 0;
+let highScore = 0;
+let coins = 0;
+let countdown = 3;
+let isMultiplayer = false;
 
-    // ---------- Bird data ----------
-    const rarityColors = {
-      Common: "#b0bec5",
-      Uncommon: "#66bb6a",
-      Rare: "#42a5f5",
-      Epic: "#ab47bc",
-      Legendary: "#ffb300",
-      Mythic: "#ff5252"
-    };
+/* ---------------- BIRDS & RARITIES ---------------- */
 
-    const allBirds = [
-      { id: 1, name: "Classic", rarity: "Common", multiplier: 1.0,
-        sprite: { body:"#ffeb3b", wing:"#fbc02d", eye:"#ffffff", pupil:"#000000", beak:"#ff9800", accent:"#fff176" } },
-      { id: 2, name: "Sky Blue", rarity: "Uncommon", multiplier: 1.1,
-        sprite: { body:"#29b6f6", wing:"#0288d1", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#4fc3f7" } },
-      { id: 3, name: "Emerald", rarity: "Rare", multiplier: 1.2,
-        sprite: { body:"#66bb6a", wing:"#2e7d32", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#a5d6a7" } },
-      { id: 4, name: "Amethyst", rarity: "Epic", multiplier: 1.4,
-        sprite: { body:"#ab47bc", wing:"#6a1b9a", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#ce93d8" } },
-      { id: 5, name: "Phoenix", rarity: "Legendary", multiplier: 1.7,
-        sprite: { body:"#ff7043", wing:"#e64a19", eye:"#ffffff", pupil:"#000000", beak:"#ffca28", accent:"#ffab91" } },
-      { id: 6, name: "Celestial", rarity: "Mythic", multiplier: 2.0,
-        sprite: { body:"#b39ddb", wing:"#7e57c2", eye:"#ffffff", pupil:"#000000", beak:"#ffca28", accent:"#d1c4e9" } }
-    ];
+const rarityColors = {
+  Common:   "#b0bec5",
+  Uncommon: "#66bb6a",
+  Rare:     "#42a5f5",
+  Epic:     "#ab47bc",
+  Legendary:"#ffb300",
+  Mythic:   "#ff5252"
+};
 
-    let unlockedBirdIds = [1];
-    let equippedBirdId = 1;
+/* 
+   BIOME BIRD SYSTEM
+   - Each bird has: id, name, rarity, multiplier, sprite
+   - Rarer birds have higher multipliers
+*/
 
-    function getBirdById(id) {
-      return allBirds.find(b => b.id === id);
+const allBirds = [
+  // BASIC EGG – Town & Farm (Common-heavy)
+  { id: 1,  name: "Sparrow",   rarity: "Common",   multiplier: 1.00,
+    sprite:{body:"#cfd8dc", wing:"#90a4ae", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#eceff1"} },
+  { id: 2,  name: "Pigeon",    rarity: "Common",   multiplier: 1.00,
+    sprite:{body:"#b0bec5", wing:"#78909c", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#cfd8dc"} },
+  { id: 3,  name: "Robin",     rarity: "Common",   multiplier: 1.05,
+    sprite:{body:"#ff8a65", wing:"#d84315", eye:"#ffffff", pupil:"#000000", beak:"#ffca28", accent:"#ffab91"} },
+  { id: 4,  name: "Crow",      rarity: "Common",   multiplier: 1.05,
+    sprite:{body:"#424242", wing:"#212121", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#616161"} },
+  { id: 5,  name: "Starling",  rarity: "Common",   multiplier: 1.10,
+    sprite:{body:"#455a64", wing:"#263238", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#607d8b"} },
+  { id: 6,  name: "Blackbird", rarity: "Common",   multiplier: 1.10,
+    sprite:{body:"#212121", wing:"#000000", eye:"#ffffff", pupil:"#000000", beak:"#ffca28", accent:"#424242"} },
+  { id: 7,  name: "Finch",     rarity: "Common",   multiplier: 1.15,
+    sprite:{body:"#ffeb3b", wing:"#fbc02d", eye:"#ffffff", pupil:"#000000", beak:"#ff9800", accent:"#fff59d"} },
+  { id: 8,  name: "Wren",      rarity: "Uncommon", multiplier: 1.25,
+    sprite:{body:"#8d6e63", wing:"#5d4037", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#a1887f"} },
+  { id: 9,  name: "Chickadee", rarity: "Uncommon", multiplier: 1.30,
+    sprite:{body:"#cfd8dc", wing:"#90a4ae", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#eceff1"} },
+  { id: 10, name: "Titmouse",  rarity: "Uncommon", multiplier: 1.35,
+    sprite:{body:"#b0bec5", wing:"#78909c", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#cfd8dc"} },
+
+  // FOREST EGG – Woodland (Uncommon-heavy)
+  { id: 11, name: "Blue Jay",    rarity: "Uncommon", multiplier: 1.40,
+    sprite:{body:"#29b6f6", wing:"#0288d1", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#4fc3f7"} },
+  { id: 12, name: "Magpie",      rarity: "Uncommon", multiplier: 1.45,
+    sprite:{body:"#ffffff", wing:"#263238", eye:"#000000", pupil:"#000000", beak:"#ffb74d", accent:"#90a4ae"} },
+  { id: 13, name: "Nuthatch",    rarity: "Uncommon", multiplier: 1.50,
+    sprite:{body:"#90a4ae", wing:"#607d8b", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#cfd8dc"} },
+  { id: 14, name: "Kinglet",     rarity: "Uncommon", multiplier: 1.55,
+    sprite:{body:"#aed581", wing:"#7cb342", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#c5e1a5"} },
+  { id: 15, name: "Treecreeper", rarity: "Uncommon", multiplier: 1.60,
+    sprite:{body:"#8d6e63", wing:"#5d4037", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#a1887f"} },
+  { id: 16, name: "Woodpecker",  rarity: "Rare",     multiplier: 1.80,
+    sprite:{body:"#ffffff", wing:"#424242", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#ef5350"} },
+  { id: 17, name: "Hawk",        rarity: "Rare",     multiplier: 2.00,
+    sprite:{body:"#8d6e63", wing:"#5d4037", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#a1887f"} },
+  { id: 18, name: "Heron",       rarity: "Rare",     multiplier: 2.10,
+    sprite:{body:"#90caf9", wing:"#42a5f5", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#bbdefb"} },
+  { id: 19, name: "Owl",         rarity: "Legendary",multiplier: 2.60,
+    sprite:{body:"#bcaaa4", wing:"#8d6e63", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#d7ccc8"} },
+
+  // EXOTIC EGG – Tropical (Rare/Epic)
+  { id: 20, name: "Parrot",          rarity: "Rare",     multiplier: 2.20,
+    sprite:{body:"#66bb6a", wing:"#2e7d32", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#a5d6a7"} },
+  { id: 21, name: "Macaw",           rarity: "Rare",     multiplier: 2.30,
+    sprite:{body:"#29b6f6", wing:"#0288d1", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#4fc3f7"} },
+  { id: 22, name: "Lyrebird",        rarity: "Rare",     multiplier: 2.40,
+    sprite:{body:"#8d6e63", wing:"#5d4037", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#a1887f"} },
+  { id: 23, name: "Toucan",          rarity: "Epic",     multiplier: 2.80,
+    sprite:{body:"#212121", wing:"#000000", eye:"#ffffff", pupil:"#000000", beak:"#ffca28", accent:"#ff7043"} },
+  { id: 24, name: "Peacock",         rarity: "Epic",     multiplier: 3.00,
+    sprite:{body:"#1e88e5", wing:"#0d47a1", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#64b5f6"} },
+  { id: 25, name: "Flamingo",        rarity: "Epic",     multiplier: 3.10,
+    sprite:{body:"#ff8a80", wing:"#ff5252", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#ffab91"} },
+  { id: 26, name: "Cassowary",       rarity: "Epic",     multiplier: 3.20,
+    sprite:{body:"#263238", wing:"#000000", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#4fc3f7"} },
+  { id: 27, name: "Secretary Bird",  rarity: "Epic",     multiplier: 3.30,
+    sprite:{body:"#cfd8dc", wing:"#90a4ae", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#ff7043"} },
+  { id: 28, name: "Bird of Paradise",rarity: "Mythic",   multiplier: 4.00,
+    sprite:{body:"#ffb74d", wing:"#f57c00", eye:"#ffffff", pupil:"#000000", beak:"#ffca28", accent:"#ffcc80"} },
+  { id: 29, name: "Hoatzin",         rarity: "Mythic",   multiplier: 4.20,
+    sprite:{body:"#a1887f", wing:"#6d4c41", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#d7ccc8"} },
+
+  // COASTAL EGG – Ocean & Shore (Rare-leaning)
+  { id: 30, name: "Seagull",   rarity: "Common",   multiplier: 1.20,
+    sprite:{body:"#ffffff", wing:"#b0bec5", eye:"#ffffff", pupil:"#000000", beak:"#ffca28", accent:"#eceff1"} },
+  { id: 31, name: "Pelican",   rarity: "Rare",     multiplier: 2.30,
+    sprite:{body:"#ffffff", wing:"#90a4ae", eye:"#ffffff", pupil:"#000000", beak:"#ffca28", accent:"#cfd8dc"} },
+  { id: 32, name: "Ibis",      rarity: "Rare",     multiplier: 2.40,
+    sprite:{body:"#f5f5f5", wing:"#bdbdbd", eye:"#ffffff", pupil:"#000000", beak:"#ff7043", accent:"#eeeeee"} },
+  { id: 33, name: "Cormorant", rarity: "Rare",     multiplier: 2.50,
+    sprite:{body:"#263238", wing:"#000000", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#455a64"} },
+  { id: 34, name: "Albatross", rarity: "Legendary",multiplier: 3.10,
+    sprite:{body:"#ffffff", wing:"#90a4ae", eye:"#ffffff", pupil:"#000000", beak:"#ffca28", accent:"#cfd8dc"} },
+  { id: 35, name: "Condor",    rarity: "Legendary",multiplier: 3.30,
+    sprite:{body:"#424242", wing:"#212121", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#616161"} },
+  { id: 36, name: "Puffin",    rarity: "Mythic",   multiplier: 4.50,
+    sprite:{body:"#212121", wing:"#000000", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#ff7043"} },
+
+  // ULTRA EGG – Mythic (Endangered / Iconic)
+  { id: 37, name: "Hummingbird",        rarity: "Mythic", multiplier: 4.80,
+    sprite:{body:"#66bb6a", wing:"#2e7d32", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#a5d6a7"} },
+  { id: 38, name: "Kingfisher",         rarity: "Mythic", multiplier: 5.00,
+    sprite:{body:"#29b6f6", wing:"#0288d1", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#4fc3f7"} },
+  { id: 39, name: "Kiwi",               rarity: "Mythic", multiplier: 5.20,
+    sprite:{body:"#8d6e63", wing:"#5d4037", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#a1887f"} },
+  { id: 40, name: "Resplendent Quetzal",rarity: "Mythic", multiplier: 5.40,
+    sprite:{body:"#26a69a", wing:"#00796b", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#4db6ac"} },
+  { id: 41, name: "Harpy Eagle",        rarity: "Legendary", multiplier: 3.80,
+    sprite:{body:"#cfd8dc", wing:"#90a4ae", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#eceff1"} },
+  { id: 42, name: "Eagle",              rarity: "Legendary", multiplier: 3.50,
+    sprite:{body:"#8d6e63", wing:"#5d4037", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#a1887f"} },
+  { id: 43, name: "Falcon",             rarity: "Legendary", multiplier: 3.60,
+    sprite:{body:"#757575", wing:"#424242", eye:"#ffffff", pupil:"#000000", beak:"#ffb74d", accent:"#9e9e9e"} }
+];
+
+let unlockedBirdIds = [1]; // start with Sparrow
+let equippedBirdId = 1;
+
+function getBirdById(id) {
+  return allBirds.find(b => b.id === id);
+}
+function getEquippedBird() {
+  return getBirdById(equippedBirdId) || allBirds[0];
+}
+function getBirdMultiplier() {
+  return getEquippedBird().multiplier;
+}
+
+/* ---------------- EGG PACKS (BIOME + WEIGHTED) ---------------- */
+
+const packs = {
+  basic: {
+    name: "Basic Egg",
+    cost: 20,
+    aura: "#b0bec5",
+    pool: [
+      1,1,1,1,2,2,3,3,4,4,5,5,6,6,7,7, // commons heavier
+      8,9,10 // uncommon lighter
+    ]
+  },
+  forest: {
+    name: "Forest Egg",
+    cost: 60,
+    aura: "#66bb6a",
+    pool: [
+      11,11,11,12,12,13,13,14,14,15,15, // uncommon
+      16,16,17,18, // rare
+      19 // legendary
+    ]
+  },
+  exotic: {
+    name: "Exotic Egg",
+    cost: 120,
+    aura: "#ab47bc",
+    pool: [
+      20,20,21,21,22,22, // rare
+      23,23,24,24,25,25,26,26,27,27, // epic
+      28,29 // mythic
+    ]
+  },
+  coastal: {
+    name: "Coastal Egg",
+    cost: 100,
+    aura: "#42a5f5",
+    pool: [
+      30,30, // common
+      31,31,32,32,33,33, // rare
+      34,34,35,35, // legendary
+      36 // mythic
+    ]
+  },
+  legendary: {
+    name: "Legendary Egg",
+    cost: 200,
+    aura: "#ffb300",
+    pool: [
+      17, // rare
+      26,27, // epic
+      41,41,42,42,43,43,35,35 // legendary heavy
+    ]
+  },
+  ultra: {
+    name: "Ultra Egg",
+    cost: 300,
+    aura: "#ff5252",
+    pool: [
+      37,37,38,38,39,39,40,40, // mythic
+      28,29,36 // extra mythics
+    ]
+  }
+};
+
+function rollFromPack(key) {
+  const p = packs[key];
+  const pool = p.pool;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+/* ---------------- BIRD OBJECTS ---------------- */
+
+const bird = {
+  x: 80,
+  y: 150,
+  width: 20,
+  height: 20,
+  velocity: 0,
+  gravity: GAME_SETTINGS.gravity,
+  lift: GAME_SETTINGS.lift
+};
+
+const bird2 = {
+  x: 280,
+  y: 150,
+  width: 20,
+  height: 20,
+  velocity: 0,
+  gravity: GAME_SETTINGS.gravity,
+  lift: GAME_SETTINGS.lift
+};
+
+/* ---------------- PIPES ---------------- */
+
+let pipes = [];
+
+/* ---------------- PARTICLES ---------------- */
+
+let jumpParticles = [];
+let scorePops = [];
+
+/* ---------------- MAPS ---------------- */
+
+let jungleLeaves = [];
+let snowflakes = [];
+let crystalSparkles = [];
+let neonPulse = 0;
+let nightFlicker = 0;
+
+const maps = {
+  day: {
+    name: "Sunny Plains",
+    bg: "#4fc3f7",
+    ground: "#8bc34a",
+    pipeMain: "#4caf50",
+    pipeLip: "#2e7d32",
+    deco: "clouds"
+  },
+  night: {
+    name: "Starry Night",
+    bg: "#0d47a1",
+    ground: "#1b5e20",
+    pipeMain: "#263238",
+    pipeLip: "#37474f",
+    deco: "stars"
+  },
+  lava: {
+    name: "Lava Caves",
+    bg: "#3e2723",
+    ground: "#5d4037",
+    pipeMain: "#6d4c41",
+    pipeLip: "#4e342e",
+    deco: "lava"
+  },
+  jungle: {
+    name: "Jungle Ruins",
+    bg: "#1b5e20",
+    ground: "#33691e",
+    pipeMain: "#2e7d32",
+    pipeLip: "#1b5e20",
+    deco: "jungleLeaves"
+  },
+  neon: {
+    name: "Neon City",
+    bg: "#000018",
+    ground: "#1a237e",
+    pipeMain: "#00e5ff",
+    pipeLip: "#00b0ff",
+    deco: "neonCity"
+  },
+  crystal: {
+    name: "Crystal Cavern",
+    bg: "#1a237e",
+    ground: "#283593",
+    pipeMain: "#4fc3f7",
+    pipeLip: "#0288d1",
+    deco: "crystals"
+  },
+  snow: {
+    name: "Snowy Peaks",
+    bg: "#90caf9",
+    ground: "#e0e0e0",
+    pipeMain: "#90a4ae",
+    pipeLip: "#78909c",
+    deco: "snow"
+  }
+};
+
+let selectedMap = "day";
+
+function initMapAnimations() {
+  jungleLeaves = [];
+  snowflakes = [];
+  crystalSparkles = [];
+  neonPulse = 0;
+  nightFlicker = 0;
+
+  for (let i=0;i<40;i++) {
+    jungleLeaves.push({
+      x: Math.random()*canvas.width,
+      y: 350 + Math.random()*200
+    });
+  }
+
+  for (let i=0;i<80;i++) {
+    snowflakes.push({
+      x: Math.random()*canvas.width,
+      y: Math.random()*canvas.height
+    });
+  }
+
+  for (let i=0;i<40;i++) {
+    crystalSparkles.push({
+      x: Math.random()*canvas.width,
+      y: 380 + Math.random()*200,
+      phase: Math.random()*Math.PI*2
+    });
+  }
+}
+initMapAnimations();
+
+function updateMapAnimations() {
+  snowflakes.forEach(s => {
+    s.y += 0.5;
+    if (s.y > canvas.height) {
+      s.y = -5;
+      s.x = Math.random()*canvas.width;
     }
-    function getEquippedBird() {
-      return getBirdById(equippedBirdId) || allBirds[0];
+  });
+
+  neonPulse += 0.05;
+  crystalSparkles.forEach(c => {
+    c.phase += 0.05;
+  });
+  nightFlicker += 0.15;
+}
+
+function drawDecorations() {
+  const deco = maps[selectedMap].deco;
+
+  if (deco === "clouds") {
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(80, 80, 25, 0, Math.PI * 2);
+    ctx.arc(110, 80, 35, 0, Math.PI * 2);
+    ctx.arc(140, 80, 25, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  if (deco === "stars") {
+    const flicker = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(nightFlicker));
+    ctx.globalAlpha = flicker;
+    ctx.fillStyle = "white";
+    for (let i = 0; i < 40; i++) {
+      ctx.fillRect(Math.random() * canvas.width, Math.random() * 200, 2, 2);
     }
-    function getBirdMultiplier() {
-      return getEquippedBird().multiplier;
-    }
+    ctx.globalAlpha = 1;
+  }
 
-    // ---------- Packs ----------
-    const packs = {
-      basic: {
-        name: "Basic Egg",
-        cost: 20,
-        pool: [1,1,1,1,2,2,3]
-      },
-      premium: {
-        name: "Premium Egg",
-        cost: 80,
-        pool: [2,2,3,3,4,4,5]
-      },
-      mythic: {
-        name: "Mythic Egg",
-        cost: 200,
-        pool: [3,4,4,5,5,6]
-      }
-    };
+  if (deco === "lava") {
+    ctx.fillStyle = "rgba(255,80,0,0.4)";
+    ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+  }
 
-    function rollFromPack(key) {
-      const p = packs[key];
-      const pool = p.pool;
-      return pool[Math.floor(Math.random()*pool.length)];
-    }
+  if (deco === "jungleLeaves") {
+    ctx.fillStyle = "#2e7d32";
+    jungleLeaves.forEach(l => {
+      ctx.beginPath();
+      ctx.ellipse(l.x, l.y, 6, 12, 0.5, 0, Math.PI*2);
+      ctx.fill();
+    });
+  }
 
-    // ---------- Bird objects ----------
-    const bird = {
-      x: 80,
-      y: 150,
-      width: 20,
-      height: 20,
-      velocity: 0,
-      gravity: GAME_SETTINGS.gravity,
-      lift: GAME_SETTINGS.lift
-    };
+  if (deco === "neonCity") {
+    ctx.fillStyle = "#120022";
+    ctx.fillRect(0, 350, 80, 250);
+    ctx.fillRect(90, 320, 60, 280);
+    ctx.fillRect(170, 360, 90, 240);
+    ctx.fillRect(270, 330, 70, 270);
+    ctx.fillRect(350, 370, 50, 230);
 
-    const bird2 = {
-      x: 280,
-      y: 150,
-      width: 20,
-      height: 20,
-      velocity: 0,
-      gravity: GAME_SETTINGS.gravity,
-      lift: GAME_SETTINGS.lift
-    };
-
-    // ---------- Pipes ----------
-    let pipes = [];
-
-    // ---------- Particles ----------
-    let jumpParticles = [];
-    let scorePops = [];
-
-    // ---------- Map decorations ----------
-    let jungleLeaves = [];
-    let snowflakes = [];
-    let crystalSparkles = [];
-    let neonPulse = 0;
-    let nightFlicker = 0;
-
-    const maps = {
-      day: {
-        name: "Sunny Plains",
-        bg: "#4fc3f7",
-        ground: "#8bc34a",
-        pipeMain: "#4caf50",
-        pipeLip: "#2e7d32",
-        deco: "clouds"
-      },
-      night: {
-        name: "Starry Night",
-        bg: "#0d47a1",
-        ground: "#1b5e20",
-        pipeMain: "#263238",
-        pipeLip: "#37474f",
-        deco: "stars"
-      },
-      lava: {
-        name: "Lava Caves",
-        bg: "#3e2723",
-        ground: "#5d4037",
-        pipeMain: "#6d4c41",
-        pipeLip: "#4e342e",
-        deco: "lava"
-      },
-      jungle: {
-        name: "Jungle Ruins",
-        bg: "#1b5e20",
-        ground: "#33691e",
-        pipeMain: "#2e7d32",
-        pipeLip: "#1b5e20",
-        deco: "jungleLeaves"
-      },
-      neon: {
-        name: "Neon City",
-        bg: "#000018",
-        ground: "#1a237e",
-        pipeMain: "#00e5ff",
-        pipeLip: "#00b0ff",
-        deco: "neonCity"
-      },
-      crystal: {
-        name: "Crystal Cavern",
-        bg: "#1a237e",
-        ground: "#283593",
-        pipeMain: "#4fc3f7",
-        pipeLip: "#0288d1",
-        deco: "crystals"
-      },
-      snow: {
-        name: "Snowy Peaks",
-        bg: "#90caf9",
-        ground: "#e0e0e0",
-        pipeMain: "#90a4ae",
-        pipeLip: "#78909c",
-        deco: "snow"
-      }
-    };
-
-    let selectedMap = "day";
-
-    function initMapAnimations() {
-      jungleLeaves = [];
-      snowflakes = [];
-      crystalSparkles = [];
-      neonPulse = 0;
-      nightFlicker = 0;
-
-      for (let i=0;i<40;i++) {
-        jungleLeaves.push({
-          x: Math.random()*canvas.width,
-          y: 350 + Math.random()*200
-        });
-      }
-
-      for (let i=0;i<80;i++) {
-        snowflakes.push({
-          x: Math.random()*canvas.width,
-          y: Math.random()*canvas.height
-        });
-      }
-
-      for (let i=0;i<40;i++) {
-        crystalSparkles.push({
-          x: Math.random()*canvas.width,
-          y: 380 + Math.random()*200,
-          phase: Math.random()*Math.PI*2
-        });
-      }
-    }
-
-    initMapAnimations();
-
-    function updateMapAnimations() {
-      snowflakes.forEach(s => {
-        s.y += 0.5;
-        if (s.y > canvas.height) {
-          s.y = -5;
-          s.x = Math.random()*canvas.width;
-        }
-      });
-
-      neonPulse += 0.05;
-      crystalSparkles.forEach(c => {
-        c.phase += 0.05;
-      });
-      nightFlicker += 0.15;
-    }
-
-    function drawDecorations() {
-      const deco = maps[selectedMap].deco;
-
-      if (deco === "clouds") {
-        ctx.fillStyle = "white";
-        ctx.beginPath();
-        ctx.arc(80, 80, 25, 0, Math.PI * 2);
-        ctx.arc(110, 80, 35, 0, Math.PI * 2);
-        ctx.arc(140, 80, 25, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      if (deco === "stars") {
-        const flicker = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(nightFlicker));
-        ctx.globalAlpha = flicker;
-        ctx.fillStyle = "white";
-        for (let i = 0; i < 40; i++) {
-          ctx.fillRect(Math.random() * canvas.width, Math.random() * 200, 2, 2);
-        }
-        ctx.globalAlpha = 1;
-      }
-
-      if (deco === "lava") {
-        ctx.fillStyle = "rgba(255,80,0,0.4)";
-        ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
-      }
-
-      if (deco === "jungleLeaves") {
-        ctx.fillStyle = "#2e7d32";
-        jungleLeaves.forEach(l => {
-          ctx.beginPath();
-          ctx.ellipse(l.x, l.y, 6, 12, 0.5, 0, Math.PI*2);
-          ctx.fill();
-        });
-      }
-
-      if (deco === "neonCity") {
-        ctx.fillStyle = "#120022";
-        ctx.fillRect(0, 350, 80, 250);
-        ctx.fillRect(90, 320, 60, 280);
-        ctx.fillRect(170, 360, 90, 240);
-        ctx.fillRect(270, 330, 70, 270);
-        ctx.fillRect(350, 370, 50, 230);
-
-        const glow = (Math.sin(neonPulse)+1)/2;
-        ctx.fillStyle = `rgba(0,229,255,${0.3+0.4*glow})`;
-        for (let x=10;x<400;x+=30) {
-          for (let y=360;y<580;y+=25) {
-            ctx.fillRect(x, y, 6, 10);
-          }
-        }
-      }
-
-      if (deco === "crystals") {
-        ctx.fillStyle = "#0d47a1";
-        ctx.fillRect(0, 380, canvas.width, 220);
-        crystalSparkles.forEach(c => {
-          const alpha = 0.3 + 0.3*Math.sin(c.phase);
-          ctx.fillStyle = `rgba(79,195,247,${alpha})`;
-          ctx.beginPath();
-          ctx.moveTo(c.x, c.y-10);
-          ctx.lineTo(c.x+6, c.y);
-          ctx.lineTo(c.x, c.y+10);
-          ctx.lineTo(c.x-6, c.y);
-          ctx.closePath();
-          ctx.fill();
-        });
-      }
-
-      if (deco === "snow") {
-        ctx.fillStyle = "#e3f2fd";
-        snowflakes.forEach(s => {
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, 2, 0, Math.PI*2);
-          ctx.fill();
-        });
-      }
-    }
-
-    // ---------- Bird drawing ----------
-    function drawBirdSprite(birdObj, cx, cy) {
-      const s = birdObj.sprite;
-      ctx.fillStyle = s.body;
-      ctx.fillRect(cx-10, cy-10, 20, 20);
-      ctx.fillStyle = s.wing;
-      ctx.fillRect(cx-12, cy-2, 10, 8);
-      ctx.fillStyle = s.eye;
-      ctx.fillRect(cx+2, cy-6, 6, 6);
-      ctx.fillStyle = s.pupil;
-      ctx.fillRect(cx+4, cy-4, 2, 2);
-      ctx.fillStyle = s.beak;
-      ctx.fillRect(cx+8, cy-2, 6, 4);
-      ctx.fillStyle = s.accent;
-      ctx.fillRect(cx-6, cy-8, 6, 4);
-    }
-
-    function drawBird() {
-      drawBirdSprite(getEquippedBird(), bird.x+10, bird.y+10);
-    }
-    function drawBird2() {
-      drawBirdSprite(getEquippedBird(), bird2.x+10, bird2.y+10);
-    }
-
-    // ---------- Pipes ----------
-    function drawPipe(p) {
-      ctx.fillStyle = maps[selectedMap].pipeMain;
-      ctx.fillRect(p.x, 0, p.width, p.top);
-      ctx.fillRect(p.x, p.bottomY, p.width, canvas.height - p.bottomY);
-
-      ctx.fillStyle = maps[selectedMap].pipeLip;
-      ctx.fillRect(p.x - 5, p.top - 20, p.width + 10, 20);
-      ctx.fillRect(p.x - 5, p.bottomY, p.width + 10, 20);
-
-      ctx.fillStyle = "rgba(0,0,0,0.2)";
-      ctx.fillRect(p.x + p.width - 5, 0, 5, p.top);
-      ctx.fillRect(p.x + p.width - 5, p.bottomY, 5, canvas.height - p.bottomY);
-    }
-    function drawPipes() {
-      pipes.forEach(drawPipe);
-    }
-
-    // ---------- Jump particles ----------
-    function spawnJumpParticles(x, y) {
-      const birdObj = getEquippedBird();
-      const color = birdObj.sprite.accent;
-      for (let i=0;i<8;i++) {
-        jumpParticles.push({
-          x: x+10,
-          y: y+10,
-          vx: (Math.random()-0.5)*1.5,
-          vy: 1 + Math.random()*1.5,
-          life: 30,
-          color
-        });
-      }
-    }
-    function updateJumpParticles() {
-      jumpParticles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life--;
-      });
-      jumpParticles = jumpParticles.filter(p => p.life>0);
-    }
-    function drawJumpParticles() {
-      jumpParticles.forEach(p => {
-        const alpha = p.life/30;
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = alpha;
-        ctx.fillRect(p.x, p.y, 3, 3);
-        ctx.globalAlpha = 1;
-      });
-    }
-
-    // ---------- Score pops ----------
-    function addScorePop(x, y) {
-      scorePops.push({ x, y, life: 30 });
-    }
-    function updateScorePops() {
-      scorePops.forEach(s => {
-        s.y -= 0.7;
-        s.life--;
-      });
-      scorePops = scorePops.filter(s => s.life>0);
-    }
-    function drawScorePops() {
-      scorePops.forEach(s => {
-        const alpha = s.life/30;
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = "white";
-        ctx.font = "16px Arial";
-        ctx.fillText("+1", s.x, s.y);
-        ctx.globalAlpha = 1;
-      });
-    }
-
-    // ---------- Progress save/load ----------
-    function saveProgress() {
-      const data = {
-        coins,
-        highScore,
-        unlockedBirdIds,
-        equippedBirdId
-      };
-      try {
-        localStorage.setItem("flappyDeluxeSave", JSON.stringify(data));
-      } catch(e) {}
-    }
-
-    function loadProgress() {
-      try {
-        const raw = localStorage.getItem("flappyDeluxeSave");
-        if (!raw) return;
-        const data = JSON.parse(raw);
-        if (typeof data.coins === "number") coins = data.coins;
-        if (typeof data.highScore === "number") highScore = data.highScore;
-        if (Array.isArray(data.unlockedBirdIds)) unlockedBirdIds = data.unlockedBirdIds;
-        if (typeof data.equippedBirdId === "number") equippedBirdId = data.equippedBirdId;
-      } catch(e) {}
-    }
-
-    loadProgress();
-
-    // ---------- Game reset ----------
-    let jumpButton = { x: canvas.width - 90, y: canvas.height - 90, w: 70, h: 70 };
-
-    function resetGame() {
-      bird.y = 150;
-      bird.velocity = 0;
-      bird2.y = 150;
-      bird2.velocity = 0;
-      pipes = [];
-      frame = 0;
-      score = 0;
-      jumpParticles = [];
-      scorePops = [];
-
-      bird.gravity = GAME_SETTINGS.gravity;
-      bird.lift = GAME_SETTINGS.lift;
-      bird2.gravity = GAME_SETTINGS.gravity;
-      bird2.lift = GAME_SETTINGS.lift;
-
-      jumpButton = { x: canvas.width - 90, y: canvas.height - 90, w: 70, h: 70 };
-    }
-
-    function updateBirdSingle(b) {
-      b.velocity += b.gravity;
-      b.y += b.velocity;
-      if (b.y + b.height > canvas.height || b.y < 0) {
-        endRun();
+    const glow = (Math.sin(neonPulse)+1)/2;
+    ctx.fillStyle = `rgba(0,229,255,${0.3+0.4*glow})`;
+    for (let x=10;x<400;x+=30) {
+      for (let y=360;y<580;y+=25) {
+        ctx.fillRect(x, y, 6, 10);
       }
     }
+  }
 
-    function updatePipes() {
-      pipes.forEach(p => p.x -= GAME_SETTINGS.pipeSpeed);
+  if (deco === "crystals") {
+    ctx.fillStyle = "#0d47a1";
+    ctx.fillRect(0, 380, canvas.width, 220);
+    crystalSparkles.forEach(c => {
+      const alpha = 0.3 + 0.3*Math.sin(c.phase);
+      ctx.fillStyle = `rgba(79,195,247,${alpha})`;
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y-10);
+      ctx.lineTo(c.x+6, c.y);
+      ctx.lineTo(c.x, c.y+10);
+      ctx.lineTo(c.x-6, c.y);
+      ctx.closePath();
+      ctx.fill();
+    });
+  }
 
-      if (frame % 120 === 0) {
-        let gap = GAME_SETTINGS.gap;
-        let top = Math.random() * (canvas.height - gap - 100) + 20;
-        pipes.push({
-          x: canvas.width + 40,
-          width: 40,
-          top: top,
-          bottomY: top + gap,
-          passed: false
-        });
+  if (deco === "snow") {
+    ctx.fillStyle = "#e3f2fd";
+    snowflakes.forEach(s => {
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, 2, 0, Math.PI*2);
+      ctx.fill();
+    });
+  }
+}
+
+/* ---------------- DRAW BIRDS ---------------- */
+
+function drawBirdSprite(birdObj, cx, cy) {
+  const s = birdObj.sprite;
+  ctx.fillStyle = s.body;
+  ctx.fillRect(cx-10, cy-10, 20, 20);
+  ctx.fillStyle = s.wing;
+  ctx.fillRect(cx-12, cy-2, 10, 8);
+  ctx.fillStyle = s.eye;
+  ctx.fillRect(cx+2, cy-6, 6, 6);
+  ctx.fillStyle = s.pupil;
+  ctx.fillRect(cx+4, cy-4, 2, 2);
+  ctx.fillStyle = s.beak;
+  ctx.fillRect(cx+8, cy-2, 6, 4);
+  ctx.fillStyle = s.accent;
+  ctx.fillRect(cx-6, cy-8, 6, 4);
+}
+
+function drawBird() {
+  drawBirdSprite(getEquippedBird(), bird.x+10, bird.y+10);
+}
+function drawBird2() {
+  drawBirdSprite(getEquippedBird(), bird2.x+10, bird2.y+10);
+}
+
+/* ---------------- PIPES ---------------- */
+
+function drawPipe(p) {
+  ctx.fillStyle = maps[selectedMap].pipeMain;
+  ctx.fillRect(p.x, 0, p.width, p.top);
+  ctx.fillRect(p.x, p.bottomY, p.width, canvas.height - p.bottomY);
+
+  ctx.fillStyle = maps[selectedMap].pipeLip;
+  ctx.fillRect(p.x - 5, p.top - 20, p.width + 10, 20);
+  ctx.fillRect(p.x - 5, p.bottomY, p.width + 10, 20);
+
+  ctx.fillStyle = "rgba(0,0,0,0.2)";
+  ctx.fillRect(p.x + p.width - 5, 0, 5, p.top);
+  ctx.fillRect(p.x + p.width - 5, p.bottomY, 5, canvas.height - p.bottomY);
+}
+function drawPipes() {
+  pipes.forEach(drawPipe);
+}
+
+/* ---------------- JUMP PARTICLES ---------------- */
+
+function spawnJumpParticles(x, y) {
+  const birdObj = getEquippedBird();
+  const color = birdObj.sprite.accent;
+  for (let i=0;i<8;i++) {
+    jumpParticles.push({
+      x: x+10,
+      y: y+10,
+      vx: (Math.random()-0.5)*1.5,
+      vy: 1 + Math.random()*1.5,
+      life: 30,
+      color
+    });
+  }
+}
+function updateJumpParticles() {
+  jumpParticles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life--;
+  });
+  jumpParticles = jumpParticles.filter(p => p.life>0);
+}
+function drawJumpParticles() {
+  jumpParticles.forEach(p => {
+    const alpha = p.life/30;
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = alpha;
+    ctx.fillRect(p.x, p.y, 3, 3);
+    ctx.globalAlpha = 1;
+  });
+}
+
+/* ---------------- SCORE POPS ---------------- */
+
+function addScorePop(x, y) {
+  scorePops.push({ x, y, life: 30 });
+}
+function updateScorePops() {
+  scorePops.forEach(s => {
+    s.y -= 0.7;
+    s.life--;
+  });
+  scorePops = scorePops.filter(s => s.life>0);
+}
+function drawScorePops() {
+  scorePops.forEach(s => {
+    const alpha = s.life/30;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "white";
+    ctx.font = "16px Arial";
+    ctx.fillText("+1", s.x, s.y);
+    ctx.globalAlpha = 1;
+  });
+}
+
+/* ---------------- SAVE / LOAD ---------------- */
+
+function saveProgress() {
+  const data = {
+    coins,
+    highScore,
+    unlockedBirdIds,
+    equippedBirdId
+  };
+  try {
+    localStorage.setItem("flappyBiomeSave", JSON.stringify(data));
+  } catch(e) {}
+}
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem("flappyBiomeSave");
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (typeof data.coins === "number") coins = data.coins;
+    if (typeof data.highScore === "number") highScore = data.highScore;
+    if (Array.isArray(data.unlockedBirdIds)) unlockedBirdIds = data.unlockedBirdIds;
+    if (typeof data.equippedBirdId === "number") equippedBirdId = data.equippedBirdId;
+  } catch(e) {}
+}
+loadProgress();
+
+/* ---------------- GAME RESET ---------------- */
+
+let jumpButton = { x: canvas.width - 90, y: canvas.height - 90, w: 70, h: 70 };
+
+function resetGame() {
+  bird.y = 150;
+  bird.velocity = 0;
+  bird2.y = 150;
+  bird2.velocity = 0;
+  pipes = [];
+  frame = 0;
+  score = 0;
+  jumpParticles = [];
+  scorePops = [];
+
+  bird.gravity = GAME_SETTINGS.gravity;
+  bird.lift = GAME_SETTINGS.lift;
+  bird2.gravity = GAME_SETTINGS.gravity;
+  bird2.lift = GAME_SETTINGS.lift;
+
+  jumpButton = { x: canvas.width - 90, y: canvas.height - 90, w: 70, h: 70 };
+}
+
+function updateBirdSingle(b) {
+  b.velocity += b.gravity;
+  b.y += b.velocity;
+  if (b.y + b.height > canvas.height || b.y < 0) {
+    endRun();
+  }
+}
+
+function updatePipes() {
+  pipes.forEach(p => p.x -= GAME_SETTINGS.pipeSpeed);
+
+  if (frame % 120 === 0) {
+    let gap = GAME_SETTINGS.gap;
+    let top = Math.random() * (canvas.height - gap - 100) + 20;
+    pipes.push({
+      x: canvas.width + 40,
+      width: 40,
+      top: top,
+      bottomY: top + gap,
+      passed: false
+    });
+  }
+
+  pipes.forEach(p => {
+    if (
+      bird.x < p.x + p.width &&
+      bird.x + bird.width > p.x &&
+      (bird.y < p.top || bird.y + bird.height > p.bottomY)
+    ) {
+      endRun();
+    }
+    if (isMultiplayer &&
+        bird2.x < p.x + p.width &&
+        bird2.x + bird2.width > p.x &&
+        (bird2.y < p.top || bird2.y + bird2.height > p.bottomY)
+    ) {
+      endRun();
+    }
+
+    if (!p.passed && p.x + p.width < bird.x) {
+      p.passed = true;
+      score++;
+      if (score > highScore) {
+        highScore = score;
       }
-
-      pipes.forEach(p => {
-        if (
-          bird.x < p.x + p.width &&
-          bird.x + bird.width > p.x &&
-          (bird.y < p.top || bird.y + bird.height > p.bottomY)
-        ) {
-          endRun();
-        }
-        if (isMultiplayer &&
-            bird2.x < p.x + p.width &&
-            bird2.x + bird2.width > p.x &&
-            (bird2.y < p.top || bird2.y + bird2.height > p.bottomY)
-        ) {
-          endRun();
-        }
-
-        if (!p.passed && p.x + p.width < bird.x) {
-          p.passed = true;
-          score++;
-          if (score > highScore) {
-            highScore = score;
-          }
-          addScorePop(p.x, p.top + 20);
-        }
-      });
+      addScorePop(p.x, p.top + 20);
     }
+  });
+}
 
-    // ---------- End run ----------
-    function endRun() {
-      gameState = "dead";
-      const finalScore = Math.floor(score * getBirdMultiplier());
-      const earned = Math.floor(score * getBirdMultiplier() * 2 * GAME_SETTINGS.coinMult);
-      coins += earned;
-      saveProgress();
-    }
+/* ---------------- END RUN ---------------- */
 
-    // ---------- UI ----------
-    function drawScore() {
-      ctx.fillStyle = "white";
-      ctx.font = "40px Arial";
-      ctx.fillText(score, canvas.width / 2 - 10, 60);
-    }
+function endRun() {
+  gameState = "dead";
+  const finalScore = Math.floor(score * getBirdMultiplier());
+  const earned = Math.floor(score * getBirdMultiplier() * 2 * GAME_SETTINGS.coinMult);
+  coins += earned;
+  saveProgress();
+}
 
-    function drawCoins() {
-      ctx.fillStyle = "yellow";
-      ctx.font = "20px Arial";
-      ctx.fillText("Coins: " + coins, 10, 30);
-    }
+/* ---------------- UI ---------------- */
 
-    function drawCountdown(text) {
-      ctx.fillStyle = "black";
-      ctx.font = "60px Arial";
-      ctx.fillText(text, canvas.width / 2 - 30, canvas.height / 2);
-    }
+function drawScore() {
+  ctx.fillStyle = "white";
+  ctx.font = "40px Arial";
+  ctx.fillText(score, canvas.width / 2 - 10, 60);
+}
 
-    function drawJumpButton() {
-      ctx.fillStyle = "rgba(255,255,255,0.3)";
-      ctx.fillRect(jumpButton.x, jumpButton.y, jumpButton.w, jumpButton.h);
-      ctx.fillStyle = "white";
-      ctx.font = "16px Arial";
-      ctx.fillText("JUMP", jumpButton.x + 10, jumpButton.y + 40);
-    }
+function drawCoins() {
+  ctx.fillStyle = "yellow";
+  ctx.font = "20px Arial";
+  ctx.fillText("Coins: " + coins, 10, 30);
+}
 
-    function drawDeathScreen() {
-      ctx.fillStyle = "rgba(0,0,0,0.5)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+function drawCountdown(text) {
+  ctx.fillStyle = "black";
+  ctx.font = "60px Arial";
+  ctx.fillText(text, canvas.width / 2 - 30, canvas.height / 2);
+}
 
-      ctx.fillStyle = "white";
-      ctx.font = "50px Arial";
-      ctx.fillText("YOU DIED", 80, 230);
+function drawJumpButton() {
+  ctx.fillStyle = "rgba(255,255,255,0.3)";
+  ctx.fillRect(jumpButton.x, jumpButton.y, jumpButton.w, jumpButton.h);
+  ctx.fillStyle = "white";
+  ctx.font = "16px Arial";
+  ctx.fillText("JUMP", jumpButton.x + 10, jumpButton.y + 40);
+}
 
-      ctx.font = "24px Arial";
-      const finalScore = Math.floor(score * getBirdMultiplier());
-      const earnedCoins = Math.floor(score * getBirdMultiplier() * 2 * GAME_SETTINGS.coinMult);
+function drawDeathScreen() {
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillText("Score: " + score, 140, 280);
-      ctx.fillText("Mult: x" + getBirdMultiplier(), 140, 310);
-      ctx.fillText("Final: " + finalScore, 140, 340);
-      ctx.fillText("High Score: " + highScore, 120, 370);
-      ctx.fillText("Coins Earned: " + earnedCoins, 110, 400);
+  ctx.fillStyle = "white";
+  ctx.font = "50px Arial";
+  ctx.fillText("YOU DIED", 80, 230);
 
-      ctx.font = "20px Arial";
-      ctx.fillText("Press any key to return to menu", 60, 450);
-    }
+  ctx.font = "24px Arial";
+  const finalScore = Math.floor(score * getBirdMultiplier());
+  const earnedCoins = Math.floor(score * getBirdMultiplier() * 2 * GAME_SETTINGS.coinMult);
 
-    // ---------- Menus & buttons ----------
-    let menuButtons = {};
-    let mapButtons = {};
-    let packButtons = {};
-    let indexBackButton = null;
-    let shopBackButton = null;
-    let settingsButtons = {};
+  ctx.fillText("Score: " + score, 140, 280);
+  ctx.fillText("Mult: x" + getBirdMultiplier().toFixed(2), 140, 310);
+  ctx.fillText("Final: " + finalScore, 140, 340);
+  ctx.fillText("High Score: " + highScore, 120, 370);
+  ctx.fillText("Coins Earned: " + earnedCoins, 110, 400);
 
-    // scrolling state (momentum) per screen
-    let scrollMain = 0, scrollMainVel = 0, scrollMainMax = 0;
-    let scrollMap = 0, scrollMapVel = 0, scrollMapMax = 0;
-    let indexScroll = 0, indexScrollVel = 0, indexScrollMax = 0;
-    let shopScroll = 0, shopScrollVel = 0, shopScrollMax = 0;
-    let settingsScroll = 0, settingsScrollVel = 0, settingsScrollMax = 0; // kept for completeness
+  ctx.font = "20px Arial";
+  ctx.fillText("Press any key to return to menu", 60, 450);
+}
 
-    const SCROLL_FRICTION = 0.94;
-    const SCROLL_SPEED = 0.4;
+/* ---------------- MENUS & BUTTONS ---------------- */
 
-    function applyMomentumScroll(scroll, vel, max) {
-      scroll += vel;
-      vel *= SCROLL_FRICTION;
-      if (scroll < 0) {
-        scroll = 0;
-        vel = 0;
-      }
-      if (scroll > max) {
-        scroll = max;
-        vel = 0;
-      }
-      return { scroll, vel };
-    }
+let menuButtons = {};
+let mapButtons = {};
+let packButtons = {};
+let indexBackButton = null;
+let shopBackButton = null;
+let settingsButtons = {};
 
-    // ---------- Main menu ----------
-    function drawMainMenu() {
-      ctx.fillStyle = maps[selectedMap].bg;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      drawDecorations();
+/* momentum scroll per screen */
+let scrollMain = 0, scrollMainVel = 0, scrollMainMax = 0;
+let scrollMap = 0, scrollMapVel = 0, scrollMapMax = 0;
+let indexScroll = 0, indexScrollVel = 0, indexScrollMax = 0;
+let shopScroll = 0, shopScrollVel = 0, shopScrollMax = 0;
 
-      const idleOffset = Math.sin(frame/30)*3;
+const SCROLL_FRICTION = 0.94;
+const SCROLL_SPEED = 0.4;
 
-      ctx.save();
-      ctx.translate(0, -scrollMain);
+function applyMomentumScroll(scroll, vel, max) {
+  scroll += vel;
+  vel *= SCROLL_FRICTION;
+  if (scroll < 0) {
+    scroll = 0;
+    vel = 0;
+  }
+  if (scroll > max) {
+    scroll = max;
+    vel = 0;
+  }
+  return { scroll, vel };
+}
 
-      ctx.fillStyle = "white";
-      ctx.font = "32px Arial";
-      ctx.fillText("Flappy Bird Deluxe", 40, 120);
+/* ---------------- MAIN MENU ---------------- */
 
-      drawCoins();
+function drawMainMenu() {
+  ctx.fillStyle = maps[selectedMap].bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawDecorations();
 
-      ctx.fillStyle = "white";
-      ctx.fillRect(80, 160, 240, 60);
-      ctx.fillStyle = "black";
-      ctx.font = "22px Arial";
-      ctx.fillText("Single Player", 120, 198);
+  const idleOffset = Math.sin(frame/30)*3;
 
-      ctx.fillStyle = "white";
-      ctx.fillRect(80, 240, 240, 60);
-      ctx.fillStyle = "black";
-      ctx.fillText("Multiplayer", 135, 278);
+  ctx.save();
+  ctx.translate(0, -scrollMain);
 
-      ctx.fillStyle = "white";
-      ctx.fillRect(80, 320, 240, 60);
-      ctx.fillStyle = "black";
-      ctx.fillText("Bird Index", 135, 358);
+  ctx.fillStyle = "white";
+  ctx.font = "32px Arial";
+  ctx.fillText("Flappy Bird Deluxe", 40, 120);
 
-      ctx.fillStyle = "white";
-      ctx.fillRect(80, 400, 240, 60);
-      ctx.fillStyle = "black";
-      ctx.fillText("Shop (Eggs)", 125, 438);
+  drawCoins();
 
-      ctx.fillStyle = "white";
-      ctx.fillRect(80, 480, 240, 60);
-      ctx.fillStyle = "black";
-      ctx.fillText("Map Select", 135, 518);
+  ctx.fillStyle = "white";
+  ctx.fillRect(80, 160, 240, 60);
+  ctx.fillStyle = "black";
+  ctx.font = "22px Arial";
+  ctx.fillText("Single Player", 120, 198);
 
-      menuButtons = {
-        single: { x:80, y:160, w:240, h:60 },
-        multi:  { x:80, y:240, w:240, h:60 },
-        index:  { x:80, y:320, w:240, h:60 },
-        shop:   { x:80, y:400, w:240, h:60 },
-        map:    { x:80, y:480, w:240, h:60 }
-      };
+  ctx.fillStyle = "white";
+  ctx.fillRect(80, 240, 240, 60);
+  ctx.fillStyle = "black";
+  ctx.fillText("Multiplayer", 135, 278);
 
-      ctx.fillStyle = "white";
-      ctx.font = "18px Arial";
-      ctx.fillText("Equipped:", 10, 560);
-      drawBirdSprite(getEquippedBird(), 110, 550 + idleOffset);
+  ctx.fillStyle = "white";
+  ctx.fillRect(80, 320, 240, 60);
+  ctx.fillStyle = "black";
+  ctx.fillText("Bird Index", 135, 358);
 
-      ctx.restore();
+  ctx.fillStyle = "white";
+  ctx.fillRect(80, 400, 240, 60);
+  ctx.fillStyle = "black";
+  ctx.fillText("Shop (Eggs)", 125, 438);
 
-      // content height for scroll
-      const contentBottom = 560 + 40;
-      scrollMainMax = Math.max(0, contentBottom - canvas.height);
-    }
+  ctx.fillStyle = "white";
+  ctx.fillRect(80, 480, 240, 60);
+  ctx.fillStyle = "black";
+  ctx.fillText("Map Select", 135, 518);
 
-    // ---------- Map select ----------
-    function drawMapSelect() {
-      ctx.fillStyle = "#222";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+  menuButtons = {
+    single: { x:80, y:160, w:240, h:60 },
+    multi:  { x:80, y:240, w:240, h:60 },
+    index:  { x:80, y:320, w:240, h:60 },
+    shop:   { x:80, y:400, w:240, h:60 },
+    map:    { x:80, y:480, w:240, h:60 }
+  };
 
-      ctx.save();
-      ctx.translate(0, -scrollMap);
+  ctx.fillStyle = "white";
+  ctx.font = "18px Arial";
+  ctx.fillText("Equipped:", 10, 560);
+  drawBirdSprite(getEquippedBird(), 110, 550 + idleOffset);
 
-      ctx.fillStyle = "white";
-      ctx.font = "36px Arial";
-      ctx.fillText("Select Map", 110, 80);
+  ctx.restore();
 
-      let y = 150;
-      mapButtons = {};
-      for (let key of Object.keys(maps)) {
-        const m = maps[key];
-        ctx.fillStyle = "white";
-        ctx.fillRect(80, y-30, 240, 60);
-        ctx.fillStyle = "black";
+  const contentBottom = 560 + 40;
+  scrollMainMax = Math.max(0, contentBottom - canvas.height);
+}
+
+/* ---------------- MAP SELECT ---------------- */
+
+function drawMapSelect() {
+  ctx.fillStyle = "#222";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  ctx.translate(0, -scrollMap);
+
+  ctx.fillStyle = "white";
+  ctx.font = "36px Arial";
+  ctx.fillText("Select Map", 110, 80);
+
+  let y = 150;
+  mapButtons = {};
+  for (let key of Object.keys(maps)) {
+    const m = maps[key];
+    ctx.fillStyle = "white";
+    ctx.fillRect(80, y-30, 240, 60);
+    ctx.fillStyle = "black";
+    ctx.font = "20px Arial";
+    ctx.fillText(m.name, 100, y+5);
+    mapButtons[key] = { x:80, y:y-30, w:240, h:60 };
+    y += 80;
+  }
+
+  ctx.fillStyle = "white";
+  ctx.fillRect(20, 20, 80, 40);
+  ctx.fillStyle = "black";
+  ctx.font = "20px Arial";
+  ctx.fillText("Back", 40, 48);
+
+  ctx.restore();
+
+  const contentBottom = y;
+  scrollMapMax = Math.max(0, contentBottom - canvas.height);
+}
+
+/* ---------------- BIRD INDEX ---------------- */
+
+let indexSortMode = "rarity";
+let indexFilterRarity = "All";
+
+function getSortedFilteredBirds() {
+  let list = allBirds.slice();
+
+  if (indexFilterRarity !== "All") {
+    list = list.filter(b => b.rarity === indexFilterRarity);
+  }
+
+  if (indexSortMode === "rarity") {
+    const order = ["Mythic","Legendary","Epic","Rare","Uncommon","Common"];
+    list.sort((a,b) => order.indexOf(a.rarity) - order.indexOf(b.rarity));
+  } else if (indexSortMode === "name") {
+    list.sort((a,b) => a.name.localeCompare(b.name));
+  } else if (indexSortMode === "mult") {
+    list.sort((a,b) => b.multiplier - a.multiplier);
+  }
+
+  return list;
+}
+
+function drawBirdIndex() {
+  ctx.fillStyle = "#222";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  ctx.translate(0, -indexScroll);
+
+  ctx.fillStyle = "white";
+  ctx.font = "36px Arial";
+  ctx.fillText("Bird Index", 110, 60);
+
+  ctx.font = "16px Arial";
+  ctx.fillText("Sort:", 20, 100);
+
+  ctx.fillStyle = indexSortMode === "rarity" ? "#00e676" : "white";
+  ctx.fillRect(60, 80, 80, 30);
+  ctx.fillStyle = "black";
+  ctx.fillText("Rarity", 70, 100);
+
+  ctx.fillStyle = indexSortMode === "name" ? "#00e676" : "white";
+  ctx.fillRect(150, 80, 80, 30);
+  ctx.fillStyle = "black";
+  ctx.fillText("Name", 165, 100);
+
+  ctx.fillStyle = indexSortMode === "mult" ? "#00e676" : "white";
+  ctx.fillRect(240, 80, 110, 30);
+  ctx.fillStyle = "black";
+  ctx.fillText("Multiplier", 250, 100);
+
+  settingsButtons.indexSortRarity = { x:60, y:80, w:80, h:30 };
+  settingsButtons.indexSortName = { x:150, y:80, w:80, h:30 };
+  settingsButtons.indexSortMult = { x:240, y:80, w:110, h:30 };
+
+  ctx.fillStyle = "white";
+  ctx.fillText("Filter:", 20, 135);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(80, 120, 200, 30);
+  ctx.fillStyle = "black";
+  ctx.fillText(indexFilterRarity, 90, 140);
+
+  settingsButtons.indexFilter = { x:80, y:120, w:200, h:30 };
+
+  let birdsPerRow = 3;
+  let boxSize = 90;
+  let padding = 20;
+  let startX = 20;
+  let startY = 170;
+
+  const birdsToShow = getSortedFilteredBirds();
+
+  let rows = Math.ceil(birdsToShow.length / birdsPerRow);
+  let contentHeight = rows * (boxSize + 70);
+  indexScrollMax = Math.max(0, contentHeight - (canvas.height - startY - 40));
+
+  let i = 0;
+  for (let birdObj of birdsToShow) {
+    let col = i % birdsPerRow;
+    let row = Math.floor(i / birdsPerRow);
+
+    let x = startX + col * (boxSize + padding);
+    let y = startY + row * (boxSize + 70);
+
+    if (y > -150 && y < canvas.height + 150 + indexScrollMax) {
+      const unlocked = unlockedBirdIds.includes(birdObj.id);
+
+      ctx.fillStyle = unlocked ? "#ffffff" : "#555555";
+      ctx.fillRect(x, y, boxSize, boxSize);
+
+      if (unlocked) {
+        drawBirdSprite(birdObj, x + boxSize/2, y + boxSize/2 - 5);
+      } else {
+        ctx.fillStyle = "#333333";
         ctx.font = "20px Arial";
-        ctx.fillText(m.name, 100, y+5);
-        mapButtons[key] = { x:80, y:y-30, w:240, h:60 };
-        y += 80;
+        ctx.fillText("?", x + boxSize/2 - 5, y + boxSize/2 + 5);
       }
 
       ctx.fillStyle = "white";
-      ctx.fillRect(20, 20, 80, 40);
-      ctx.fillStyle = "black";
-      ctx.font = "20px Arial";
-      ctx.fillText("Back", 40, 48);
+      ctx.font = "14px Arial";
+      ctx.fillText(birdObj.name, x, y + boxSize + 18);
 
-      ctx.restore();
+      ctx.fillStyle = rarityColors[birdObj.rarity];
+      ctx.fillText(birdObj.rarity, x, y + boxSize + 34);
 
-      const contentBottom = y;
-      scrollMapMax = Math.max(0, contentBottom - canvas.height);
+      ctx.fillStyle = "yellow";
+      ctx.fillText("x" + birdObj.multiplier.toFixed(2), x, y + boxSize + 50);
+
+      if (unlocked) {
+        ctx.fillStyle = "white";
+        ctx.font = "10px Arial";
+        ctx.fillText("Click to equip", x, y + boxSize + 64);
+      }
     }
 
-    // ---------- Bird Index (sortable + filter) ----------
-    let indexSortMode = "rarity";
-    let indexFilterRarity = "All";
+    i++;
+  }
 
-    function getSortedFilteredBirds() {
-      let list = allBirds.slice();
+  ctx.fillStyle = "white";
+  ctx.fillRect(20, 20, 80, 40);
+  ctx.fillStyle = "black";
+  ctx.font = "20px Arial";
+  ctx.fillText("Back", 40, 48);
 
-      if (indexFilterRarity !== "All") {
-        list = list.filter(b => b.rarity === indexFilterRarity);
-      }
+  indexBackButton = { x:20, y:20, w:80, h:40 };
 
-      if (indexSortMode === "rarity") {
-        const order = ["Mythic","Legendary","Epic","Rare","Uncommon","Common"];
-        list.sort((a,b) => order.indexOf(a.rarity) - order.indexOf(b.rarity));
-      } else if (indexSortMode === "name") {
-        list.sort((a,b) => a.name.localeCompare(b.name));
-      } else if (indexSortMode === "mult") {
-        list.sort((a,b) => b.multiplier - a.multiplier);
-      }
+  ctx.restore();
+}
 
-      return list;
+/* ---------------- SHOP ---------------- */
+
+function drawShop() {
+  ctx.fillStyle = "#111";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  ctx.translate(0, -shopScroll);
+
+  ctx.fillStyle = "white";
+  ctx.font = "32px Arial";
+  ctx.fillText("Shop - Eggs", 110, 60);
+
+  drawCoins();
+
+  let y = 130;
+  packButtons = {};
+  for (let key of Object.keys(packs)) {
+    const p = packs[key];
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(40, y-30, 320, 70);
+
+    ctx.fillStyle = "#000000";
+    ctx.font = "20px Arial";
+    ctx.fillText(p.name, 60, y);
+    ctx.fillText(p.cost + " coins", 250, y);
+
+    packButtons[key] = { x:40, y:y-30, w:320, h:70 };
+    y += 90;
+  }
+
+  ctx.fillStyle = "white";
+  ctx.fillRect(20, 20, 80, 40);
+  ctx.fillStyle = "black";
+  ctx.font = "20px Arial";
+  ctx.fillText("Back", 40, 48);
+
+  shopBackButton = { x:20, y:20, w:80, h:40 };
+
+  ctx.restore();
+
+  const contentBottom = y;
+  shopScrollMax = Math.max(0, contentBottom - canvas.height);
+}
+
+/* ---------------- EGG DRAWING (PIXEL + AURA) ---------------- */
+
+function drawEggForPack(packKey, cx, cy, crackLevel, shake) {
+  const colors = {
+    basic: "#ffffff",
+    forest: "#c8e6c9",
+    exotic: "#ffecb3",
+    coastal:"#bbdefb",
+    legendary:"#ffe082",
+    ultra:"#f8bbd0"
+  };
+  const c = colors[packKey] || "#ffffff";
+
+  const size = 40;
+  const x = cx - size/2 + (shake || 0);
+  const y = cy - size/2;
+
+  ctx.fillStyle = c;
+  ctx.fillRect(x+10, y+5, 20, 30);
+  ctx.fillRect(x+8, y+10, 24, 20);
+  ctx.fillRect(x+12, y+2, 16, 6);
+
+  if (crackLevel >= 1) {
+    ctx.fillStyle = "#555";
+    ctx.fillRect(x+15, y+18, 2, 6);
+    ctx.fillRect(x+19, y+22, 2, 6);
+    ctx.fillRect(x+23, y+18, 2, 6);
+  }
+  if (crackLevel >= 2) {
+    ctx.fillStyle = "#333";
+    ctx.fillRect(x+14, y+24, 4, 4);
+    ctx.fillRect(x+22, y+24, 4, 4);
+  }
+}
+
+/* ---------------- RARITY STAR BURST ---------------- */
+
+let rollAnim = {
+  timer: 0,
+  phase: "egg",
+  stars: []
+};
+let lastRolledBird = null;
+let lastRollPackKey = null;
+let lastRollNew = false;
+
+function spawnRarityStars(birdObj) {
+  rollAnim.stars = [];
+  let count = 5;
+  const rarity = birdObj.rarity;
+  let color = rarityColors[rarity] || "#ffffff";
+
+  if (rarity === "Common") count = 6;
+  else if (rarity === "Uncommon") count = 8;
+  else if (rarity === "Rare") count = 10;
+  else if (rarity === "Epic") count = 12;
+  else if (rarity === "Legendary") count = 14;
+  else if (rarity === "Mythic") count = 16;
+
+  for (let i=0;i<count;i++) {
+    rollAnim.stars.push({
+      x: canvas.width/2,
+      y: 260,
+      vx: (Math.random()-0.5)*3,
+      vy: (Math.random()-0.5)*3,
+      life: 40,
+      color
+    });
+  }
+}
+
+function updateRarityStars() {
+  rollAnim.stars.forEach(s => {
+    s.x += s.vx;
+    s.y += s.vy;
+    s.life--;
+  });
+  rollAnim.stars = rollAnim.stars.filter(s => s.life>0);
+}
+
+function drawRarityStars() {
+  rollAnim.stars.forEach(s => {
+    const alpha = s.life/40;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = s.color;
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y-4);
+    ctx.lineTo(s.x+3, s.y);
+    ctx.lineTo(s.x, s.y+4);
+    ctx.lineTo(s.x-3, s.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  });
+}
+
+/* ---------------- RARITY AURA AROUND EGG ---------------- */
+
+function drawRarityAura(birdObj, cx, cy) {
+  const color = rarityColors[birdObj.rarity] || "#ffffff";
+  const radius = 60;
+  const grad = ctx.createRadialGradient(cx, cy, 10, cx, cy, radius);
+  grad.addColorStop(0, color + "88");
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI*2);
+  ctx.fill();
+}
+
+/* ---------------- ROLL SCREEN ---------------- */
+
+function drawRollScreen() {
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "white";
+  ctx.font = "32px Arial";
+  ctx.fillText("You hatched:", 110, 80);
+
+  if (!lastRolledBird || !lastRollPackKey) return;
+
+  const cx = canvas.width/2;
+  const cy = 230;
+  const t = rollAnim.timer;
+
+  if (rollAnim.phase === "egg") {
+    drawRarityAura(lastRolledBird, cx, cy);
+    const shake = Math.sin(t/5)*3;
+    drawEggForPack(lastRollPackKey, cx, cy, 0, shake);
+  } else if (rollAnim.phase === "crack") {
+    drawRarityAura(lastRolledBird, cx, cy);
+    const shake = Math.sin(t/3)*4;
+    const crackLevel = t > 40 ? 2 : 1;
+    drawEggForPack(lastRollPackKey, cx, cy, crackLevel, shake);
+  } else if (rollAnim.phase === "reveal") {
+    drawRarityAura(lastRolledBird, cx, cy);
+    drawEggForPack(lastRollPackKey, cx, cy+10, 2, 0);
+    drawBirdSprite(lastRolledBird, cx, cy);
+    drawRarityStars();
+  }
+
+  if (rollAnim.phase === "reveal") {
+    ctx.fillStyle = "white";
+    ctx.font = "24px Arial";
+    ctx.fillText(lastRolledBird.name, 150, 300);
+
+    ctx.fillStyle = rarityColors[lastRolledBird.rarity];
+    ctx.fillText(lastRolledBird.rarity, 150, 330);
+
+    ctx.fillStyle = "yellow";
+    ctx.fillText("x" + lastRolledBird.multiplier.toFixed(2), 150, 360);
+
+    if (lastRollNew) {
+      ctx.fillStyle = "#00e676";
+      ctx.font = "24px Arial";
+      ctx.fillText("NEW!", 170, 390);
     }
 
-    function drawBirdIndex() {
-      ctx.fillStyle = "#222";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "white";
+    ctx.font = "18px Arial";
+    ctx.fillText("Click to continue", 130, 440);
+  } else {
+    ctx.fillStyle = "white";
+    ctx.font = "18px Arial";
+    ctx.fillText("Hatching...", 150, 440);
+  }
+}
 
-      ctx.save();
-      ctx.translate(0, -indexScroll);
+function updateRollAnimation() {
+  if (!lastRolledBird) return;
 
-      ctx.fillStyle = "white";
-      ctx.font = "36px Arial";
-      ctx.fillText("Bird Index", 110, 60);
+  rollAnim.timer++;
 
-      ctx.font = "16px Arial";
-      ctx.fillText("Sort:", 20, 100);
+  if (rollAnim.phase === "egg" && rollAnim.timer > 40) {
+    rollAnim.phase = "crack";
+    rollAnim.timer = 0;
+  } else if (rollAnim.phase === "crack" && rollAnim.timer > 40) {
+    rollAnim.phase = "reveal";
+    rollAnim.timer = 0;
+    spawnRarityStars(lastRolledBird);
+  }
 
-      ctx.fillStyle = indexSortMode === "rarity" ? "#00e676" : "white";
-      ctx.fillRect(60, 80, 80, 30);
-      ctx.fillStyle = "black";
-      ctx.fillText("Rarity", 70, 100);
+  if (rollAnim.phase === "reveal") {
+    updateRarityStars();
+  }
+}
 
-      ctx.fillStyle = indexSortMode === "name" ? "#00e676" : "white";
-      ctx.fillRect(150, 80, 80, 30);
-      ctx.fillStyle = "black";
-      ctx.fillText("Name", 165, 100);
+/* ---------------- COUNTDOWN ---------------- */
 
-      ctx.fillStyle = indexSortMode === "mult" ? "#00e676" : "white";
-      ctx.fillRect(240, 80, 110, 30);
-      ctx.fillStyle = "black";
-      ctx.fillText("Multiplier", 250, 100);
+function countdownTick() {
+  countdown--;
+  if (countdown > 0) {
+    setTimeout(countdownTick, 1000);
+  } else {
+    gameState = isMultiplayer ? "playingMulti" : "playing";
+  }
+}
 
-      settingsButtons.indexSortRarity = { x:60, y:80, w:80, h:30 };
-      settingsButtons.indexSortName = { x:150, y:80, w:80, h:30 };
-      settingsButtons.indexSortMult = { x:240, y:80, w:110, h:30 };
+/* ---------------- INPUT ---------------- */
 
-      ctx.fillStyle = "white";
-      ctx.fillText("Filter:", 20, 135);
+document.addEventListener("keydown", (e) => {
+  if (gameState === "playing") {
+    bird.velocity = bird.lift;
+    spawnJumpParticles(bird.x, bird.y);
+  } else if (gameState === "playingMulti") {
+    if (e.key === "w" || e.key === "W") {
+      bird.velocity = bird.lift;
+      spawnJumpParticles(bird.x, bird.y);
+    }
+    if (e.key === "ArrowUp") {
+      bird2.velocity = bird2.lift;
+      spawnJumpParticles(bird2.x, bird2.y);
+    }
+  } else if (gameState === "dead") {
+    resetGame();
+    gameState = "mainMenu";
+  }
+});
 
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(80, 120, 200, 30);
-      ctx.fillStyle = "black";
-      ctx.fillText(indexFilterRarity, 90, 140);
+/* lock page scroll, use wheel for canvas momentum */
+canvas.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const dy = e.deltaY * SCROLL_SPEED;
 
-      settingsButtons.indexFilter = { x:80, y:120, w:200, h:30 };
+  if (gameState === "mainMenu") {
+    scrollMainVel += dy;
+  } else if (gameState === "mapSelect") {
+    scrollMapVel += dy;
+  } else if (gameState === "index") {
+    indexScrollVel += dy;
+  } else if (gameState === "shop") {
+    shopScrollVel += dy;
+  }
+}, { passive:false });
 
+canvas.addEventListener("click", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  if (gameState === "playing" || gameState === "playingMulti") {
+    if (inside(mx,my,jumpButton)) {
+      if (gameState === "playing") {
+        bird.velocity = bird.lift;
+        spawnJumpParticles(bird.x, bird.y);
+      } else {
+        bird.velocity = bird.lift;
+        spawnJumpParticles(bird.x, bird.y);
+      }
+      return;
+    }
+  }
+
+  if (gameState === "mainMenu") {
+    const myAdj = my + scrollMain;
+
+    if (inside(mx,myAdj,menuButtons.single)) {
+      resetGame();
+      isMultiplayer = false;
+      countdown = 3;
+      gameState = "countdown";
+      setTimeout(countdownTick, 1000);
+    } else if (inside(mx,myAdj,menuButtons.multi)) {
+      resetGame();
+      isMultiplayer = true;
+      countdown = 3;
+      gameState = "countdown";
+      setTimeout(countdownTick, 1000);
+    } else if (inside(mx,myAdj,menuButtons.index)) {
+      gameState = "index";
+    } else if (inside(mx,myAdj,menuButtons.shop)) {
+      gameState = "shop";
+    } else if (inside(mx,myAdj,menuButtons.map)) {
+      gameState = "mapSelect";
+    }
+
+  } else if (gameState === "mapSelect") {
+    const myAdj = my + scrollMap;
+    if (inside(mx,myAdj,{x:20,y:20,w:80,h:40})) {
+      gameState = "mainMenu";
+      return;
+    }
+    for (let key of Object.keys(mapButtons)) {
+      if (inside(mx,myAdj,mapButtons[key])) {
+        selectedMap = key;
+        initMapAnimations();
+        gameState = "mainMenu";
+        return;
+      }
+    }
+
+  } else if (gameState === "index") {
+    const myAdj = my + indexScroll;
+
+    if (inside(mx,myAdj,indexBackButton)) {
+      gameState = "mainMenu";
+      return;
+    }
+
+    if (inside(mx,myAdj,settingsButtons.indexSortRarity)) {
+      indexSortMode = "rarity";
+    } else if (inside(mx,myAdj,settingsButtons.indexSortName)) {
+      indexSortMode = "name";
+    } else if (inside(mx,myAdj,settingsButtons.indexSortMult)) {
+      indexSortMode = "mult";
+    } else if (inside(mx,myAdj,settingsButtons.indexFilter)) {
+      const order = ["All","Common","Uncommon","Rare","Epic","Legendary","Mythic"];
+      let idx = order.indexOf(indexFilterRarity);
+      idx = (idx + 1) % order.length;
+      indexFilterRarity = order[idx];
+    } else {
       let birdsPerRow = 3;
       let boxSize = 90;
       let padding = 20;
@@ -792,583 +1361,179 @@
 
       const birdsToShow = getSortedFilteredBirds();
 
-      let rows = Math.ceil(birdsToShow.length / birdsPerRow);
-      let contentHeight = rows * (boxSize + 70);
-      indexScrollMax = Math.max(0, contentHeight - (canvas.height - startY - 40));
-
-      let i = 0;
-      for (let birdObj of birdsToShow) {
+      for (let i=0;i<birdsToShow.length;i++) {
         let col = i % birdsPerRow;
         let row = Math.floor(i / birdsPerRow);
 
         let x = startX + col * (boxSize + padding);
         let y = startY + row * (boxSize + 70);
 
-        if (y > -150 && y < canvas.height + 150 + indexScrollMax) {
-          const unlocked = unlockedBirdIds.includes(birdObj.id);
+        let box = { x:x, y:y, w:boxSize, h:boxSize };
 
-          ctx.fillStyle = unlocked ? "#ffffff" : "#555555";
-          ctx.fillRect(x, y, boxSize, boxSize);
+        if (inside(mx,myAdj,box)) {
+          const b = birdsToShow[i];
+          if (unlockedBirdIds.includes(b.id)) {
+            equippedBirdId = b.id;
+            saveProgress();
+          }
+        }
+      }
+    }
 
-          if (unlocked) {
-            drawBirdSprite(birdObj, x + boxSize/2, y + boxSize/2 - 5);
+  } else if (gameState === "shop") {
+    const myAdj = my + shopScroll;
+    if (inside(mx,myAdj,shopBackButton)) {
+      gameState = "mainMenu";
+      return;
+    }
+    for (let key of Object.keys(packButtons)) {
+      if (inside(mx,myAdj,packButtons[key])) {
+        const pack = packs[key];
+        if (coins >= pack.cost) {
+          coins -= pack.cost;
+          const birdId = rollFromPack(key);
+          const birdObj = getBirdById(birdId);
+          lastRolledBird = birdObj;
+          lastRollPackKey = key;
+          if (!unlockedBirdIds.includes(birdId)) {
+            unlockedBirdIds.push(birdId);
+            lastRollNew = true;
           } else {
-            ctx.fillStyle = "#333333";
-            ctx.font = "20px Arial";
-            ctx.fillText("?", x + boxSize/2 - 5, y + boxSize/2 + 5);
+            lastRollNew = false;
           }
-
-          ctx.fillStyle = "white";
-          ctx.font = "14px Arial";
-          ctx.fillText(birdObj.name, x, y + boxSize + 18);
-
-          ctx.fillStyle = rarityColors[birdObj.rarity];
-          ctx.fillText(birdObj.rarity, x, y + boxSize + 34);
-
-          ctx.fillStyle = "yellow";
-          ctx.fillText("x" + birdObj.multiplier, x, y + boxSize + 50);
-
-          if (unlocked) {
-            ctx.fillStyle = "white";
-            ctx.font = "10px Arial";
-            ctx.fillText("Click to equip", x, y + boxSize + 64);
-          }
+          saveProgress();
+          rollAnim.timer = 0;
+          rollAnim.phase = "egg";
+          rollAnim.stars = [];
+          gameState = "roll";
         }
-
-        i++;
-      }
-
-      ctx.fillStyle = "white";
-      ctx.fillRect(20, 20, 80, 40);
-      ctx.fillStyle = "black";
-      ctx.font = "20px Arial";
-      ctx.fillText("Back", 40, 48);
-
-      indexBackButton = { x:20, y:20, w:80, h:40 };
-
-      ctx.restore();
-    }
-
-    // ---------- Shop / Eggs ----------
-    function drawShop() {
-      ctx.fillStyle = "#111";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.save();
-      ctx.translate(0, -shopScroll);
-
-      ctx.fillStyle = "white";
-      ctx.font = "32px Arial";
-      ctx.fillText("Shop - Eggs", 110, 60);
-
-      drawCoins();
-
-      let y = 130;
-      packButtons = {};
-      for (let key of Object.keys(packs)) {
-        const p = packs[key];
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(40, y-30, 320, 70);
-
-        ctx.fillStyle = "#000000";
-        ctx.font = "20px Arial";
-        ctx.fillText(p.name, 60, y);
-        ctx.fillText(p.cost + " coins", 250, y);
-
-        packButtons[key] = { x:40, y:y-30, w:320, h:70 };
-        y += 90;
-      }
-
-      ctx.fillStyle = "white";
-      ctx.fillRect(20, 20, 80, 40);
-      ctx.fillStyle = "black";
-      ctx.font = "20px Arial";
-      ctx.fillText("Back", 40, 48);
-
-      shopBackButton = { x:20, y:20, w:80, h:40 };
-
-      ctx.restore();
-
-      const contentBottom = y;
-      shopScrollMax = Math.max(0, contentBottom - canvas.height);
-    }
-
-    // ---------- Egg drawing (pixelated style) ----------
-    function drawEggForPack(packKey, cx, cy, crackLevel, shake) {
-      const colors = {
-        basic: "#ffffff",
-        premium: "#ffeb3b",
-        mythic: "#b39ddb"
-      };
-      const c = colors[packKey] || "#ffffff";
-
-      const size = 40;
-      const x = cx - size/2 + (shake || 0);
-      const y = cy - size/2;
-
-      ctx.fillStyle = c;
-      ctx.fillRect(x+10, y+5, 20, 30);
-      ctx.fillRect(x+8, y+10, 24, 20);
-      ctx.fillRect(x+12, y+2, 16, 6);
-
-      if (crackLevel >= 1) {
-        ctx.fillStyle = "#555";
-        ctx.fillRect(x+15, y+18, 2, 6);
-        ctx.fillRect(x+19, y+22, 2, 6);
-        ctx.fillRect(x+23, y+18, 2, 6);
-      }
-      if (crackLevel >= 2) {
-        ctx.fillStyle = "#333";
-        ctx.fillRect(x+14, y+24, 4, 4);
-        ctx.fillRect(x+22, y+24, 4, 4);
       }
     }
-
-    // ---------- Rarity star burst ----------
-    let rollAnim = {
-      timer: 0,
-      phase: "egg",
-      stars: []
-    };
-    let lastRolledBird = null;
-    let lastRollPackKey = null;
-    let lastRollNew = false;
-
-    function spawnRarityStars(birdObj) {
-      rollAnim.stars = [];
-      let count = 5;
-      const rarity = birdObj.rarity;
-      let color = rarityColors[rarity] || "#ffffff";
-
-      if (rarity === "Common") count = 5;
-      else if (rarity === "Uncommon") count = 7;
-      else if (rarity === "Rare") count = 9;
-      else if (rarity === "Epic") count = 11;
-      else if (rarity === "Legendary") count = 13;
-      else if (rarity === "Mythic") count = 15;
-
-      for (let i=0;i<count;i++) {
-        rollAnim.stars.push({
-          x: canvas.width/2,
-          y: 260,
-          vx: (Math.random()-0.5)*3,
-          vy: (Math.random()-0.5)*3,
-          life: 40,
-          color
-        });
-      }
+  } else if (gameState === "roll") {
+    if (rollAnim.phase === "reveal") {
+      gameState = "shop";
     }
+  }
+});
 
-    function updateRarityStars() {
-      rollAnim.stars.forEach(s => {
-        s.x += s.vx;
-        s.y += s.vy;
-        s.life--;
-      });
-      rollAnim.stars = rollAnim.stars.filter(s => s.life>0);
-    }
+function inside(mx,my,btn) {
+  if (!btn) return false;
+  return mx > btn.x && mx < btn.x+btn.w && my > btn.y && my < btn.y+btn.h;
+}
 
-    function drawRarityStars() {
-      rollAnim.stars.forEach(s => {
-        const alpha = s.life/40;
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = s.color;
-        ctx.beginPath();
-        ctx.moveTo(s.x, s.y-4);
-        ctx.lineTo(s.x+3, s.y);
-        ctx.lineTo(s.x, s.y+4);
-        ctx.lineTo(s.x-3, s.y);
-        ctx.closePath();
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      });
-    }
+/* ---------------- MAIN LOOP ---------------- */
 
-    // ---------- Roll screen (egg animation) ----------
-    function drawRollScreen() {
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+function loop() {
+  updateMapAnimations();
 
-      ctx.fillStyle = "white";
-      ctx.font = "32px Arial";
-      ctx.fillText("You hatched:", 110, 80);
+  if (gameState === "mainMenu") {
+    const r = applyMomentumScroll(scrollMain, scrollMainVel, scrollMainMax);
+    scrollMain = r.scroll; scrollMainVel = r.vel;
+    drawMainMenu();
+    frame++;
+    requestAnimationFrame(loop);
+    return;
+  }
 
-      if (!lastRolledBird || !lastRollPackKey) return;
+  if (gameState === "mapSelect") {
+    const r = applyMomentumScroll(scrollMap, scrollMapVel, scrollMapMax);
+    scrollMap = r.scroll; scrollMapVel = r.vel;
+    drawMapSelect();
+    frame++;
+    requestAnimationFrame(loop);
+    return;
+  }
 
-      const cx = canvas.width/2;
-      const cy = 230;
+  if (gameState === "index") {
+    const r = applyMomentumScroll(indexScroll, indexScrollVel, indexScrollMax);
+    indexScroll = r.scroll; indexScrollVel = r.vel;
+    drawBirdIndex();
+    frame++;
+    requestAnimationFrame(loop);
+    return;
+  }
 
-      const t = rollAnim.timer;
+  if (gameState === "shop") {
+    const r = applyMomentumScroll(shopScroll, shopScrollVel, shopScrollMax);
+    shopScroll = r.scroll; shopScrollVel = r.vel;
+    drawShop();
+    frame++;
+    requestAnimationFrame(loop);
+    return;
+  }
 
-      if (rollAnim.phase === "egg") {
-        const shake = Math.sin(t/5)*3;
-        drawEggForPack(lastRollPackKey, cx, cy, 0, shake);
-      } else if (rollAnim.phase === "crack") {
-        const shake = Math.sin(t/3)*4;
-        const crackLevel = t > 40 ? 2 : 1;
-        drawEggForPack(lastRollPackKey, cx, cy, crackLevel, shake);
-      } else if (rollAnim.phase === "reveal") {
-        drawEggForPack(lastRollPackKey, cx, cy+10, 2, 0);
-        drawBirdSprite(lastRolledBird, cx, cy);
-        drawRarityStars();
-      }
+  if (gameState === "roll") {
+    updateRollAnimation();
+    drawRollScreen();
+    frame++;
+    requestAnimationFrame(loop);
+    return;
+  }
 
-      if (rollAnim.phase === "reveal") {
-        ctx.fillStyle = "white";
-        ctx.font = "24px Arial";
-        ctx.fillText(lastRolledBird.name, 150, 300);
+  ctx.fillStyle = maps[selectedMap].bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawDecorations();
 
-        ctx.fillStyle = rarityColors[lastRolledBird.rarity];
-        ctx.fillText(lastRolledBird.rarity, 150, 330);
+  if (gameState === "countdown") {
+    drawCountdown(countdown);
+    frame++;
+    requestAnimationFrame(loop);
+    return;
+  }
 
-        ctx.fillStyle = "yellow";
-        ctx.fillText("x" + lastRolledBird.multiplier, 150, 360);
+  if (gameState === "playing") {
+    drawBird();
+    drawPipes();
+    updateBirdSingle(bird);
+    updatePipes();
+    updateJumpParticles();
+    updateScorePops();
+    drawJumpParticles();
+    drawScorePops();
+    drawScore();
+    drawCoins();
+    drawJumpButton();
+    frame++;
+  }
 
-        if (lastRollNew) {
-          ctx.fillStyle = "#00e676";
-          ctx.font = "24px Arial";
-          ctx.fillText("NEW!", 170, 390);
-        }
+  if (gameState === "playingMulti") {
+    ctx.strokeStyle = "rgba(255,255,255,0.4)";
+    ctx.beginPath();
+    ctx.moveTo(canvas.width/2, 0);
+    ctx.lineTo(canvas.width/2, canvas.height);
+    ctx.stroke();
 
-        ctx.fillStyle = "white";
-        ctx.font = "18px Arial";
-        ctx.fillText("Click to continue", 130, 440);
-      } else {
-        ctx.fillStyle = "white";
-        ctx.font = "18px Arial";
-        ctx.fillText("Hatching...", 150, 440);
-      }
-    }
+    ctx.fillStyle = "white";
+    ctx.font = "14px Arial";
+    ctx.fillText("P1 (W)", 10, 20);
+    ctx.fillText("P2 (↑)", canvas.width-70, 20);
 
-    function updateRollAnimation() {
-      if (!lastRolledBird) return;
+    drawBird();
+    drawBird2();
+    drawPipes();
+    updateBirdSingle(bird);
+    updateBirdSingle(bird2);
+    updatePipes();
+    updateJumpParticles();
+    updateScorePops();
+    drawJumpParticles();
+    drawScorePops();
+    drawScore();
+    drawCoins();
+    drawJumpButton();
+    frame++;
+  }
 
-      rollAnim.timer++;
+  if (gameState === "dead") {
+    drawDeathScreen();
+    frame++;
+  }
 
-      if (rollAnim.phase === "egg" && rollAnim.timer > 40) {
-        rollAnim.phase = "crack";
-        rollAnim.timer = 0;
-      } else if (rollAnim.phase === "crack" && rollAnim.timer > 40) {
-        rollAnim.phase = "reveal";
-        rollAnim.timer = 0;
-        spawnRarityStars(lastRolledBird);
-      }
+  requestAnimationFrame(loop);
+}
 
-      if (rollAnim.phase === "reveal") {
-        updateRarityStars();
-      }
-    }
-
-    // ---------- Countdown ----------
-    function countdownTick() {
-      countdown--;
-      if (countdown > 0) {
-        setTimeout(countdownTick, 1000);
-      } else {
-        gameState = isMultiplayer ? "playingMulti" : "playing";
-      }
-    }
-
-    // ---------- Input ----------
-    document.addEventListener("keydown", (e) => {
-      if (gameState === "playing") {
-        bird.velocity = bird.lift;
-        spawnJumpParticles(bird.x, bird.y);
-      } else if (gameState === "playingMulti") {
-        if (e.key === "w" || e.key === "W") {
-          bird.velocity = bird.lift;
-          spawnJumpParticles(bird.x, bird.y);
-        }
-        if (e.key === "ArrowUp") {
-          bird2.velocity = bird2.lift;
-          spawnJumpParticles(bird2.x, bird2.y);
-        }
-      } else if (gameState === "dead") {
-        resetGame();
-        gameState = "mainMenu";
-      }
-    });
-
-    // momentum scroll on canvas only
-    canvas.addEventListener("wheel", (e) => {
-      e.preventDefault();
-
-      const dy = e.deltaY * SCROLL_SPEED;
-
-      if (gameState === "mainMenu") {
-        scrollMainVel += dy;
-      } else if (gameState === "mapSelect") {
-        scrollMapVel += dy;
-      } else if (gameState === "index") {
-        indexScrollVel += dy;
-      } else if (gameState === "shop") {
-        shopScrollVel += dy;
-      }
-    }, { passive:false });
-
-    canvas.addEventListener("click", (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-
-      if (gameState === "playing" || gameState === "playingMulti") {
-        if (inside(mx,my,jumpButton)) {
-          if (gameState === "playing") {
-            bird.velocity = bird.lift;
-            spawnJumpParticles(bird.x, bird.y);
-          } else {
-            bird.velocity = bird.lift;
-            spawnJumpParticles(bird.x, bird.y);
-          }
-          return;
-        }
-      }
-
-      if (gameState === "mainMenu") {
-        const myAdj = my + scrollMain;
-
-        if (inside(mx,myAdj,menuButtons.single)) {
-          resetGame();
-          isMultiplayer = false;
-          countdown = 3;
-          gameState = "countdown";
-          setTimeout(countdownTick, 1000);
-        } else if (inside(mx,myAdj,menuButtons.multi)) {
-          resetGame();
-          isMultiplayer = true;
-          countdown = 3;
-          gameState = "countdown";
-          setTimeout(countdownTick, 1000);
-        } else if (inside(mx,myAdj,menuButtons.index)) {
-          gameState = "index";
-        } else if (inside(mx,myAdj,menuButtons.shop)) {
-          gameState = "shop";
-        } else if (inside(mx,myAdj,menuButtons.map)) {
-          gameState = "mapSelect";
-        }
-
-      } else if (gameState === "mapSelect") {
-        const myAdj = my + scrollMap;
-        if (inside(mx,myAdj,{x:20,y:20,w:80,h:40})) {
-          gameState = "mainMenu";
-          return;
-        }
-        for (let key of Object.keys(mapButtons)) {
-          if (inside(mx,myAdj,mapButtons[key])) {
-            selectedMap = key;
-            initMapAnimations();
-            gameState = "mainMenu";
-            return;
-          }
-        }
-
-      } else if (gameState === "index") {
-        const myAdj = my + indexScroll;
-
-        if (inside(mx,myAdj,indexBackButton)) {
-          gameState = "mainMenu";
-          return;
-        }
-
-        if (inside(mx,myAdj,settingsButtons.indexSortRarity)) {
-          indexSortMode = "rarity";
-        } else if (inside(mx,myAdj,settingsButtons.indexSortName)) {
-          indexSortMode = "name";
-        } else if (inside(mx,myAdj,settingsButtons.indexSortMult)) {
-          indexSortMode = "mult";
-        } else if (inside(mx,myAdj,settingsButtons.indexFilter)) {
-          const order = ["All","Common","Uncommon","Rare","Epic","Legendary","Mythic"];
-          let idx = order.indexOf(indexFilterRarity);
-          idx = (idx + 1) % order.length;
-          indexFilterRarity = order[idx];
-        } else {
-          let birdsPerRow = 3;
-          let boxSize = 90;
-          let padding = 20;
-          let startX = 20;
-          let startY = 170;
-
-          const birdsToShow = getSortedFilteredBirds();
-
-          for (let i=0;i<birdsToShow.length;i++) {
-            let col = i % birdsPerRow;
-            let row = Math.floor(i / birdsPerRow);
-
-            let x = startX + col * (boxSize + padding);
-            let y = startY + row * (boxSize + 70);
-
-            let box = { x:x, y:y, w:boxSize, h:boxSize };
-
-            if (inside(mx,myAdj,box)) {
-              const b = birdsToShow[i];
-              if (unlockedBirdIds.includes(b.id)) {
-                equippedBirdId = b.id;
-                saveProgress();
-              }
-            }
-          }
-        }
-
-      } else if (gameState === "shop") {
-        const myAdj = my + shopScroll;
-        if (inside(mx,myAdj,shopBackButton)) {
-          gameState = "mainMenu";
-          return;
-        }
-        for (let key of Object.keys(packButtons)) {
-          if (inside(mx,myAdj,packButtons[key])) {
-            const pack = packs[key];
-            if (coins >= pack.cost) {
-              coins -= pack.cost;
-              const birdId = rollFromPack(key);
-              const birdObj = getBirdById(birdId);
-              lastRolledBird = birdObj;
-              lastRollPackKey = key;
-              if (!unlockedBirdIds.includes(birdId)) {
-                unlockedBirdIds.push(birdId);
-                lastRollNew = true;
-              } else {
-                lastRollNew = false;
-              }
-              saveProgress();
-              rollAnim.timer = 0;
-              rollAnim.phase = "egg";
-              rollAnim.stars = [];
-              gameState = "roll";
-            }
-          }
-        }
-      } else if (gameState === "roll") {
-        if (rollAnim.phase === "reveal") {
-          gameState = "shop";
-        }
-      }
-    });
-
-    function inside(mx,my,btn) {
-      if (!btn) return false;
-      return mx > btn.x && mx < btn.x+btn.w && my > btn.y && my < btn.y+btn.h;
-    }
-
-    // ---------- Main loop ----------
-    function loop() {
-      updateMapAnimations();
-
-      // apply momentum scroll
-      if (gameState === "mainMenu") {
-        const r = applyMomentumScroll(scrollMain, scrollMainVel, scrollMainMax);
-        scrollMain = r.scroll; scrollMainVel = r.vel;
-      } else if (gameState === "mapSelect") {
-        const r = applyMomentumScroll(scrollMap, scrollMapVel, scrollMapMax);
-        scrollMap = r.scroll; scrollMapVel = r.vel;
-      } else if (gameState === "index") {
-        const r = applyMomentumScroll(indexScroll, indexScrollVel, indexScrollMax);
-        indexScroll = r.scroll; indexScrollVel = r.vel;
-      } else if (gameState === "shop") {
-        const r = applyMomentumScroll(shopScroll, shopScrollVel, shopScrollMax);
-        shopScroll = r.scroll; shopScrollVel = r.vel;
-      }
-
-      if (gameState === "mainMenu") {
-        drawMainMenu();
-        frame++;
-        requestAnimationFrame(loop);
-        return;
-      }
-
-      if (gameState === "mapSelect") {
-        drawMapSelect();
-        frame++;
-        requestAnimationFrame(loop);
-        return;
-      }
-
-      if (gameState === "index") {
-        drawBirdIndex();
-        frame++;
-        requestAnimationFrame(loop);
-        return;
-      }
-
-      if (gameState === "shop") {
-        drawShop();
-        frame++;
-        requestAnimationFrame(loop);
-        return;
-      }
-
-      if (gameState === "roll") {
-        updateRollAnimation();
-        drawRollScreen();
-        frame++;
-        requestAnimationFrame(loop);
-        return;
-      }
-
-      ctx.fillStyle = maps[selectedMap].bg;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      drawDecorations();
-
-      if (gameState === "countdown") {
-        drawCountdown(countdown);
-        frame++;
-        requestAnimationFrame(loop);
-        return;
-      }
-
-      if (gameState === "playing") {
-        drawBird();
-        drawPipes();
-        updateBirdSingle(bird);
-        updatePipes();
-        updateJumpParticles();
-        updateScorePops();
-        drawJumpParticles();
-        drawScorePops();
-        drawScore();
-        drawCoins();
-        drawJumpButton();
-        frame++;
-      }
-
-      if (gameState === "playingMulti") {
-        ctx.strokeStyle = "rgba(255,255,255,0.4)";
-        ctx.beginPath();
-        ctx.moveTo(canvas.width/2, 0);
-        ctx.lineTo(canvas.width/2, canvas.height);
-        ctx.stroke();
-
-        ctx.fillStyle = "white";
-        ctx.font = "14px Arial";
-        ctx.fillText("P1 (W)", 10, 20);
-        ctx.fillText("P2 (↑)", canvas.width-70, 20);
-
-        drawBird();
-        drawBird2();
-        drawPipes();
-        updateBirdSingle(bird);
-        updateBirdSingle(bird2);
-        updatePipes();
-        updateJumpParticles();
-        updateScorePops();
-        drawJumpParticles();
-        drawScorePops();
-        drawScore();
-        drawCoins();
-        drawJumpButton();
-        frame++;
-      }
-
-      if (gameState === "dead") {
-        drawDeathScreen();
-        frame++;
-      }
-
-      requestAnimationFrame(loop);
-    }
-
-    resetGame();
-    loop();
-  </script>
+resetGame();
+loop();
+</script>
 </body>
 </html>
